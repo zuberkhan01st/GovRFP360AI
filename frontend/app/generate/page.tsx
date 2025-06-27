@@ -1,290 +1,255 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { FileText, ArrowLeft, ArrowRight, Loader2, Download, Copy, CheckCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { 
+  FileText, 
+  ArrowLeft, 
+  Loader2, 
+  Download, 
+  Copy, 
+  CheckCircle,
+  AlertTriangle,
+  Wand2,
+  Clock,
+  FileCheck,
+  Building,
+  MapPin,
+  IndianRupee,
+  Plus,
+  X,
+  BookOpen,
+  Target,
+  Settings
+} from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { useRFPStore } from "@/lib/store"
+import { RFPGenerationAPI, RFPGenerationRequest, RFPGenerationResponse, industryOptions, projectTypeOptions, disciplineOptions } from "@/lib/api"
+import DocumentPreview from "@/components/DocumentPreview"
+import SuccessNotification from "@/components/SuccessNotification"
 
-const industries = [
-  "Environmental",
-  "Infrastructure",
-  "Technology",
-  "Healthcare",
-  "Education",
-  "Defense",
-  "Transportation",
-  "Energy",
-]
+interface LoadingStep {
+  id: string
+  title: string
+  description: string
+  completed: boolean
+}
 
-const projectTypes = [
-  "Development",
-  "Modernization",
-  "Compliance",
-  "Maintenance",
-  "Consulting",
-  "Supply",
-  "Services",
-  "Research",
-]
-
-const disciplines = [
-  "Environmental Engineering",
-  "Civil Engineering",
-  "Software Development",
-  "IoT Systems",
-  "Data Analytics",
-  "Project Management",
-  "Quality Assurance",
-  "Cybersecurity",
-  "Cloud Computing",
-  "AI/ML",
-  "Blockchain",
-  "Mobile Development",
+const GENERATION_STEPS: LoadingStep[] = [
+  {
+    id: 'analyzing',
+    title: 'Analyzing Project Requirements',
+    description: 'Processing your project details and requirements...',
+    completed: false
+  },
+  {
+    id: 'compliance',
+    title: 'Applying Government Compliance',
+    description: 'Integrating GFR 2017, CVC guidelines, and Make in India policies...',
+    completed: false
+  },
+  {
+    id: 'technical',
+    title: 'Building Technical Specifications',
+    description: 'Creating detailed technical requirements and IS codes compliance...',
+    completed: false
+  },
+  {
+    id: 'structure',
+    title: 'Structuring RFP Document',
+    description: 'Organizing sections with proper government formatting...',
+    completed: false
+  },
+  {
+    id: 'content',
+    title: 'Generating Comprehensive Content',
+    description: 'Creating 4000+ words of detailed, government-grade content...',
+    completed: false
+  },
+  {
+    id: 'validation',
+    title: 'Final Validation & Quality Check',
+    description: 'Ensuring compliance and professional formatting...',
+    completed: false
+  }
 ]
 
 export default function GeneratePage() {
-  const { formData, setFormData, generatedRFP, setGeneratedRFP, isGenerating, setIsGenerating } = useRFPStore()
+  // Form state
   const [currentStep, setCurrentStep] = useState(1)
-  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>(formData.disciplines || [])
-  const [requirements, setRequirements] = useState<string[]>(formData.requirements || [])
-  const [newRequirement, setNewRequirement] = useState("")
+  const [formData, setFormData] = useState<RFPGenerationRequest>({
+    projectName: '',
+    projectDescription: '',
+    industry: '',
+    projectType: '',
+    budget: '',
+    timeline: '',
+    location: '',
+    disciplines: [],
+    requirements: [],
+    technicalSpecifications: [],
+    compliance: [],
+    expectedOutcomes: []
+  })
 
-  const totalSteps = 4
-  const progress = (currentStep / totalSteps) * 100
+  // Generation state
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationSteps, setGenerationSteps] = useState<LoadingStep[]>(GENERATION_STEPS)
+  const [currentGenerationStep, setCurrentGenerationStep] = useState(0)
+  const [result, setResult] = useState<RFPGenerationResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
+  // Document preview state
+  const [showPreview, setShowPreview] = useState(false)
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
+  // Dynamic options based on industry
+  const [availableDisciplines, setAvailableDisciplines] = useState<string[]>([])
+
+  // Update disciplines when industry changes
+  useEffect(() => {
+    if (formData.industry && disciplineOptions[formData.industry as keyof typeof disciplineOptions]) {
+      setAvailableDisciplines(disciplineOptions[formData.industry as keyof typeof disciplineOptions])
+    } else {
+      setAvailableDisciplines([])
+    }
+    setFormData(prev => ({ ...prev, disciplines: [] }))
+  }, [formData.industry])
+
+  // Array field handlers
+  const addToArray = (field: keyof RFPGenerationRequest, value: string) => {
+    if (!value.trim()) return
+    const currentArray = formData[field] as string[] || []
+    if (!currentArray.includes(value.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: [...currentArray, value.trim()]
+      }))
     }
   }
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
+  const removeFromArray = (field: keyof RFPGenerationRequest, index: number) => {
+    const currentArray = formData[field] as string[] || []
+    setFormData(prev => ({
+      ...prev,
+      [field]: currentArray.filter((_, i) => i !== index)
+    }))
   }
 
-  const handleDisciplineToggle = (discipline: string) => {
-    const updated = selectedDisciplines.includes(discipline)
-      ? selectedDisciplines.filter((d) => d !== discipline)
-      : [...selectedDisciplines, discipline]
-    setSelectedDisciplines(updated)
-    setFormData({ ...formData, disciplines: updated })
+  // Generation simulation
+  const simulateGenerationSteps = () => {
+    return new Promise<void>((resolve) => {
+      let stepIndex = 0
+      const interval = setInterval(() => {
+        setGenerationSteps(prev => 
+          prev.map((step, i) => 
+            i === stepIndex ? { ...step, completed: true } : step
+          )
+        )
+        setCurrentGenerationStep(stepIndex + 1)
+        stepIndex++
+        
+        if (stepIndex >= GENERATION_STEPS.length) {
+          clearInterval(interval)
+          resolve()
+        }
+      }, 2000) // 2 seconds per step = 12 seconds total
+    })
   }
 
-  const addRequirement = () => {
-    if (newRequirement.trim()) {
-      const updated = [...requirements, newRequirement.trim()]
-      setRequirements(updated)
-      setFormData({ ...formData, requirements: updated })
-      setNewRequirement("")
-    }
-  }
-
-  const removeRequirement = (index: number) => {
-    const updated = requirements.filter((_, i) => i !== index)
-    setRequirements(updated)
-    setFormData({ ...formData, requirements: updated })
-  }
-
-  const generateRFP = async () => {
+  // Generate RFP
+  const handleGenerate = async () => {
     setIsGenerating(true)
+    setError(null)
+    setResult(null)
+    setGenerationSteps(GENERATION_STEPS.map(step => ({ ...step, completed: false })))
+    setCurrentGenerationStep(0)
+
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      const mockRFP = {
-        success: true,
-        rfpText: `# निविदा सूचना / NOTICE INVITING TENDER
-
-## NIT No: GOV/RFP/2025/ENV/001
-## Date: ${new Date().toLocaleDateString("en-IN")}
-
----
-
-### PROJECT: ${formData.projectName}
-
-**Industry:** ${formData.industry}  
-**Project Type:** ${formData.projectType}  
-**Budget:** ${formData.budget}  
-**Timeline:** ${formData.timeline}  
-**Location:** ${formData.location}
-
----
-
-## 1. PROJECT OVERVIEW
-
-${formData.projectDescription}
-
-This comprehensive ${formData.projectType.toLowerCase()} project in the ${formData.industry.toLowerCase()} sector requires specialized expertise and cutting-edge technology solutions. The project aims to deliver world-class infrastructure while maintaining strict compliance with Indian Government regulations and international standards.
-
-## 2. SCOPE OF WORK
-
-The selected contractor shall be responsible for:
-
-### 2.1 Primary Deliverables
-- Complete project design and implementation
-- Technology integration and deployment
-- Quality assurance and testing
-- Documentation and training
-- Maintenance and support services
-
-### 2.2 Technical Requirements
-${selectedDisciplines.map((d) => `- ${d} expertise and certification`).join("\n")}
-
-### 2.3 Specific Requirements
-${requirements.map((r) => `- ${r}`).join("\n")}
-
-## 3. ELIGIBILITY CRITERIA
-
-### 3.1 Technical Qualifications
-- Minimum 5 years experience in ${formData.industry.toLowerCase()} projects
-- ISO 9001:2015 certification mandatory
-- Previous government project experience preferred
-- Local content compliance as per Make in India guidelines
-
-### 3.2 Financial Criteria
-- Annual turnover of minimum ₹${Number.parseInt(formData.budget?.replace(/[^\d]/g, "") || "0") * 0.3} Crores in last 3 years
-- Net worth of minimum ₹${Number.parseInt(formData.budget?.replace(/[^\d]/g, "") || "0") * 0.2} Crores
-- Bank guarantee capability
-
-## 4. COMPLIANCE REQUIREMENTS
-
-### 4.1 Regulatory Compliance
-✓ GFR 2017 Guidelines adherence  
-✓ CVC Guidelines compliance  
-✓ Make in India policy (${formData.localContent || 60}% local content)  
-✓ Atmanirbhar Bharat initiative support  
-✓ Digital India compliance  
-✓ MSME preference as applicable  
-
-### 4.2 Quality Standards
-- IS/BIS certification for all materials
-- International quality standards compliance
-- Environmental clearance as required
-- Safety protocols as per Indian standards
-
-## 5. SUBMISSION REQUIREMENTS
-
-### 5.1 Technical Proposal
-- Company profile and experience
-- Project methodology and approach
-- Team composition and CVs
-- Timeline and milestones
-- Quality assurance plan
-
-### 5.2 Financial Proposal
-- Detailed cost breakdown
-- Payment schedule proposal
-- Bank guarantees and securities
-- Tax compliance certificates
-
-## 6. EVALUATION CRITERIA
-
-### Technical Evaluation (70%)
-- Experience and expertise: 25%
-- Methodology and approach: 20%
-- Team qualifications: 15%
-- Past performance: 10%
-
-### Financial Evaluation (30%)
-- Cost competitiveness: 20%
-- Value for money: 10%
-
-## 7. TERMS AND CONDITIONS
-
-### 7.1 Contract Duration
-Project completion within ${formData.timeline} from award date.
-
-### 7.2 Payment Terms
-- Advance payment: 10% against bank guarantee
-- Milestone-based payments: 80%
-- Final payment: 10% after successful completion
-
-### 7.3 Penalties and Incentives
-- Delay penalty: 0.5% per week (max 10%)
-- Early completion bonus: 2% for completion 1 month early
-
-## 8. SUBMISSION DETAILS
-
-**Last Date for Submission:** ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN")}  
-**Technical Bid Opening:** ${new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN")}  
-**Financial Bid Opening:** ${new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN")}
-
-**Submission Address:**  
-Chief Project Officer  
-Government Procurement Division  
-${formData.location}
-
----
-
-## 9. CONTACT INFORMATION
-
-**Project Officer:** Shri/Smt. [Name]  
-**Email:** procurement@gov.in  
-**Phone:** +91-11-XXXXXXXX  
-**Office Hours:** 10:00 AM to 5:00 PM (Monday to Friday)
-
----
-
-*This RFP document has been generated using AI technology and complies with Indian Government procurement standards. All terms and conditions are subject to applicable laws and regulations.*
-
-**Generated on:** ${new Date().toLocaleString("en-IN")}  
-**Document ID:** RFP-${Date.now()}  
-**AI System:** GovRFP360AI v2.0`,
-        metadata: {
-          projectName: formData.projectName,
-          industry: formData.industry,
-          wordCount: 1250,
-          generatedAt: new Date().toISOString(),
-          aiProvider: "AI System",
-        },
-      }
-
-      setGeneratedRFP(mockRFP)
-      setCurrentStep(4)
-    } catch (error) {
-      console.error("Error generating RFP:", error)
+      // Start the simulation
+      const simulationPromise = simulateGenerationSteps()
+      
+      // Make the actual API call
+      const apiPromise = RFPGenerationAPI.generateRFP(formData)
+      
+      // Wait for both to complete
+      const [, apiResult] = await Promise.all([simulationPromise, apiPromise])
+      
+      setResult(apiResult)
+      setShowSuccessNotification(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate RFP')
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const copyToClipboard = () => {
-    if (generatedRFP?.rfpText) {
-      navigator.clipboard.writeText(generatedRFP.rfpText)
-    }
+  // Copy to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
-  const downloadRFP = (format: string) => {
-    if (!generatedRFP?.rfpText) return
+  // Show document preview
+  const showDocumentPreview = () => {
+    if (!result) return
+    setShowPreview(true)
+  }
 
-    const blob = new Blob([generatedRFP.rfpText], { type: "text/plain" })
+  // Download as text file
+  const downloadRFP = () => {
+    if (!result) return
+    const blob = new Blob([result.rfpText], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = document.createElement('a')
     a.href = url
-    a.download = `${formData.projectName || "RFP"}.${format}`
+    a.download = `${formData.projectName?.replace(/\s+/g, '_') || 'RFP'}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
+  // Prepare document data for preview
+  const getDocumentData = () => {
+    if (!result) return null
+    
+    return {
+      title: `Request for Proposal - ${formData.projectName}`,
+      content: result.rfpText,
+      metadata: {
+        projectName: formData.projectName || 'Unnamed Project',
+        industry: formData.industry || 'General',
+        wordCount: result.rfpText.split(/\s+/).length,
+        generatedAt: new Date().toISOString()
+      }
+    }
+  }
+
+  const validateStep = (step: number) => {
+    switch (step) {
+      case 1:
+        return formData.projectName && formData.industry && formData.projectType
+      case 2:
+        return formData.projectDescription && formData.location
+      case 3:
+        return (formData.disciplines?.length || 0) > 0 && (formData.requirements?.length || 0) > 0
+      default:
+        return true
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3">
@@ -293,7 +258,7 @@ ${formData.location}
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">GovRFP360AI</h1>
-                <p className="text-sm text-gray-600">RFP Generator</p>
+                <p className="text-sm text-gray-600">AI-Powered RFP Generator</p>
               </div>
             </Link>
             <Link href="/">
@@ -307,441 +272,664 @@ ${formData.location}
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-bold text-gray-900">Generate Government RFP</h2>
-            <Badge variant="secondary">
-              Step {currentStep} of {totalSteps}
-            </Badge>
-          </div>
-          <Progress value={progress} className="h-2" />
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Generate Government RFP</h2>
+          <p className="text-lg text-gray-600">
+            Create comprehensive, compliant Indian Government RFP documents with AI assistance
+          </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <span>
-                    {currentStep === 1 && "Project Basics"}
-                    {currentStep === 2 && "Project Details"}
-                    {currentStep === 3 && "Compliance & Preferences"}
-                    {currentStep === 4 && "Generated RFP"}
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  {currentStep === 1 && "Enter basic project information"}
-                  {currentStep === 2 && "Provide detailed project requirements"}
-                  {currentStep === 3 && "Configure compliance settings"}
-                  {currentStep === 4 && "Review and download your RFP"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <AnimatePresence mode="wait">
-                  {/* Step 1: Project Basics */}
-                  {currentStep === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="projectName">Project Name *</Label>
-                          <Input
-                            id="projectName"
-                            placeholder="Regional Environmental Monitoring Network"
-                            value={formData.projectName || ""}
-                            onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                          />
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {!result && !isGenerating && (
+              <div className="space-y-6">
+                {/* Progress Indicator */}
+                <Card className="shadow-lg border-0">
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      {[1, 2, 3].map((step) => (
+                        <div key={step} className="flex items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            currentStep === step 
+                              ? 'bg-blue-600 text-white' 
+                              : currentStep > step 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {currentStep > step ? <CheckCircle className="h-4 w-4" /> : step}
+                          </div>
+                          {step < 3 && (
+                            <div className={`w-16 h-1 mx-2 ${
+                              currentStep > step ? 'bg-green-600' : 'bg-gray-200'
+                            }`} />
+                          )}
                         </div>
-                        <div>
-                          <Label htmlFor="location">Location *</Label>
-                          <Input
-                            id="location"
-                            placeholder="Metropolitan District"
-                            value={formData.location || ""}
-                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          />
-                        </div>
-                      </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-2 text-sm">
+                      <span className={currentStep >= 1 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Project Basics
+                      </span>
+                      <span className={currentStep >= 2 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Details & Scope
+                      </span>
+                      <span className={currentStep >= 3 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Requirements
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="industry">Industry *</Label>
-                          <Select
-                            value={formData.industry || ""}
-                            onValueChange={(value) => setFormData({ ...formData, industry: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select industry" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {industries.map((industry) => (
-                                <SelectItem key={industry} value={industry}>
-                                  {industry}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="projectType">Project Type *</Label>
-                          <Select
-                            value={formData.projectType || ""}
-                            onValueChange={(value) => setFormData({ ...formData, projectType: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select project type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {projectTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="budget">Budget *</Label>
-                          <Input
-                            id="budget"
-                            placeholder="₹85 Crores"
-                            value={formData.budget || ""}
-                            onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="timeline">Timeline *</Label>
-                          <Input
-                            id="timeline"
-                            placeholder="36 months"
-                            value={formData.timeline || ""}
-                            onChange={(e) => setFormData({ ...formData, timeline: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 2: Project Details */}
-                  {currentStep === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div>
-                        <Label htmlFor="projectDescription">Project Description *</Label>
-                        <Textarea
-                          id="projectDescription"
-                          placeholder="Provide a detailed description of your project..."
-                          rows={4}
-                          value={formData.projectDescription || ""}
-                          onChange={(e) => setFormData({ ...formData, projectDescription: e.target.value })}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Technical Disciplines</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-                          {disciplines.map((discipline) => (
-                            <div key={discipline} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={discipline}
-                                checked={selectedDisciplines.includes(discipline)}
-                                onCheckedChange={() => handleDisciplineToggle(discipline)}
-                              />
-                              <Label htmlFor={discipline} className="text-sm">
-                                {discipline}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label>Project Requirements</Label>
-                        <div className="flex space-x-2 mt-2">
-                          <Input
-                            placeholder="Add a requirement..."
-                            value={newRequirement}
-                            onChange={(e) => setNewRequirement(e.target.value)}
-                            onKeyPress={(e) => e.key === "Enter" && addRequirement()}
-                          />
-                          <Button onClick={addRequirement}>Add</Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {requirements.map((req, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="cursor-pointer"
-                              onClick={() => removeRequirement(index)}
+                {/* Step 1: Project Basics */}
+                {currentStep === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Building className="h-5 w-5 text-blue-600" />
+                          <span>Project Basics</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Provide the fundamental information about your project
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="projectName">Project Name *</Label>
+                            <Input
+                              id="projectName"
+                              placeholder="e.g., Regional Environmental Monitoring Network"
+                              value={formData.projectName}
+                              onChange={(e) => setFormData(prev => ({ ...prev, projectName: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="industry">Industry *</Label>
+                            <Select
+                              value={formData.industry}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, industry: value }))}
                             >
-                              {req} ×
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 3: Compliance */}
-                  {currentStep === 3 && (
-                    <motion.div
-                      key="step3"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h3 className="font-semibold text-lg">Compliance Settings</h3>
-
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="makeInIndia"
-                              checked={formData.makeInIndia || false}
-                              onCheckedChange={(checked) =>
-                                setFormData({ ...formData, makeInIndia: checked as boolean })
-                              }
-                            />
-                            <Label htmlFor="makeInIndia">Make in India Compliance</Label>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select industry" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {industryOptions.map((industry) => (
+                                  <SelectItem key={industry} value={industry}>
+                                    {industry}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="msmePreference"
-                              checked={formData.msmePreference || false}
-                              onCheckedChange={(checked) =>
-                                setFormData({ ...formData, msmePreference: checked as boolean })
-                              }
-                            />
-                            <Label htmlFor="msmePreference">MSME Preference</Label>
+                          <div className="space-y-2">
+                            <Label htmlFor="projectType">Project Type *</Label>
+                            <Select
+                              value={formData.projectType}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, projectType: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select project type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projectTypeOptions.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="bilingualContent"
-                              checked={formData.bilingualContent || false}
-                              onCheckedChange={(checked) =>
-                                setFormData({ ...formData, bilingualContent: checked as boolean })
-                              }
+                          <div className="space-y-2">
+                            <Label htmlFor="location">Location</Label>
+                            <Input
+                              id="location"
+                              placeholder="e.g., Metropolitan Environmental District"
+                              value={formData.location}
+                              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                             />
-                            <Label htmlFor="bilingualContent">Bilingual Content (Hindi/English)</Label>
                           </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="localContent">Local Content Requirement (%)</Label>
-                          <Input
-                            id="localContent"
-                            type="number"
-                            placeholder="60"
-                            min="0"
-                            max="100"
-                            value={formData.localContent || 60}
-                            onChange={(e) =>
-                              setFormData({ ...formData, localContent: Number.parseInt(e.target.value) })
-                            }
-                          />
-                          <p className="text-sm text-gray-600 mt-1">
-                            Minimum local content as per Make in India guidelines
-                          </p>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div>
-                        <h3 className="font-semibold text-lg mb-4">Automatic Compliance Features</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            "GFR 2017 Guidelines",
-                            "CVC Compliance",
-                            "Digital India",
-                            "Atmanirbhar Bharat",
-                            "IS Codes Integration",
-                            "BIS Certification",
-                          ].map((feature) => (
-                            <div key={feature} className="flex items-center space-x-2">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <span className="text-sm text-gray-700">{feature}</span>
+                          <div className="space-y-2">
+                            <Label htmlFor="budget">Budget</Label>
+                            <div className="relative">
+                              <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="budget"
+                                placeholder="e.g., ₹85 Crores"
+                                className="pl-10"
+                                value={formData.budget}
+                                onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+                              />
                             </div>
-                          ))}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="timeline">Timeline</Label>
+                            <div className="relative">
+                              <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="timeline"
+                                placeholder="e.g., 36 months"
+                                className="pl-10"
+                                value={formData.timeline}
+                                onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
 
-                  {/* Step 4: Generated RFP */}
-                  {currentStep === 4 && generatedRFP && (
-                    <motion.div
-                      key="step4"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold">RFP Generated Successfully!</h3>
-                          <p className="text-gray-600">
-                            {generatedRFP.metadata.wordCount} words • Generated on{" "}
-                            {new Date(generatedRFP.metadata.generatedAt).toLocaleString()}
+                {/* Step 2: Project Description */}
+                {currentStep === 2 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <BookOpen className="h-5 w-5 text-blue-600" />
+                          <span>Project Details & Scope</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Provide detailed description and scope of your project
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="projectDescription">Project Description *</Label>
+                          <Textarea
+                            id="projectDescription"
+                            placeholder="Provide a comprehensive description of your project, including objectives, expected outcomes, and key deliverables..."
+                            rows={8}
+                            value={formData.projectDescription}
+                            onChange={(e) => setFormData(prev => ({ ...prev, projectDescription: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            Minimum 100 characters. Be specific about project goals and requirements.
                           </p>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" onClick={copyToClipboard}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy
-                          </Button>
-                          <Button variant="outline" onClick={() => downloadRFP("txt")}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Requirements & Specifications */}
+                {currentStep === 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Target className="h-5 w-5 text-blue-600" />
+                          <span>Requirements & Specifications</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Define technical requirements, disciplines, and expected outcomes
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Disciplines */}
+                        <div className="space-y-3">
+                          <Label>Disciplines/Expertise Required *</Label>
+                          <Select
+                            onValueChange={(value) => addToArray('disciplines', value)}
+                            disabled={!availableDisciplines.length}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={
+                                availableDisciplines.length 
+                                  ? "Add discipline..." 
+                                  : "Select industry first"
+                              } />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableDisciplines.map((discipline) => (
+                                <SelectItem key={discipline} value={discipline}>
+                                  {discipline}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.disciplines?.map((discipline, index) => (
+                              <Badge key={index} variant="secondary" className="px-3 py-1">
+                                {discipline}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
+                                  onClick={() => removeFromArray('disciplines', index)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                        <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-                          {generatedRFP.rfpText}
-                        </pre>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        <Separator />
 
-                {/* Navigation Buttons */}
-                <div className="flex justify-between pt-6 border-t">
-                  <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                        {/* Requirements */}
+                        <div className="space-y-3">
+                          <Label>Key Requirements *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter a key requirement..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('requirements', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('requirements', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {formData.requirements?.map((requirement, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{requirement}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('requirements', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Technical Specifications */}
+                        <div className="space-y-3">
+                          <Label>Technical Specifications (Optional)</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter technical specification..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('technicalSpecifications', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('technicalSpecifications', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {formData.technicalSpecifications?.map((spec, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{spec}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('technicalSpecifications', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expected Outcomes */}
+                        <div className="space-y-3">
+                          <Label>Expected Outcomes (Optional)</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter expected outcome..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('expectedOutcomes', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('expectedOutcomes', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {formData.expectedOutcomes?.map((outcome, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{outcome}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('expectedOutcomes', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(currentStep - 1)}
+                    disabled={currentStep === 1}
+                  >
                     Previous
                   </Button>
-
-                  {currentStep < 3 && (
-                    <Button onClick={handleNext}>
-                      Next
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
-
-                  {currentStep === 3 && (
-                    <Button
-                      onClick={generateRFP}
-                      disabled={isGenerating}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          Generate RFP
-                          <ArrowRight className="h-4 w-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <div className="flex space-x-2">
+                    {currentStep < 3 ? (
+                      <Button
+                        onClick={() => setCurrentStep(currentStep + 1)}
+                        disabled={!validateStep(currentStep)}
+                      >
+                        Next
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleGenerate}
+                        disabled={!validateStep(currentStep) || isGenerating}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      >
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Generate RFP
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
+
+            {/* Generation Progress */}
+            {isGenerating && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-6"
+              >
+                <Card className="shadow-lg border-0">
+                  <CardHeader className="text-center">
+                    <CardTitle className="flex items-center justify-center space-x-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                      <span>Generating Your Government RFP</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Please wait while we create your comprehensive, compliant RFP document
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      {generationSteps.map((step, index) => (
+                        <motion.div
+                          key={step.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={`flex items-center space-x-4 p-4 rounded-lg ${
+                            step.completed 
+                              ? 'bg-green-50 border border-green-200' 
+                              : index === currentGenerationStep 
+                                ? 'bg-blue-50 border border-blue-200' 
+                                : 'bg-gray-50 border border-gray-200'
+                          }`}
+                        >
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                            step.completed 
+                              ? 'bg-green-600 text-white' 
+                              : index === currentGenerationStep 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-300 text-gray-600'
+                          }`}>
+                            {step.completed ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : index === currentGenerationStep ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <span className="text-sm font-semibold">{index + 1}</span>
+                            )}
+                          </div>
+                          <div className="flex-grow">
+                            <h3 className={`font-semibold ${
+                              step.completed ? 'text-green-800' : index === currentGenerationStep ? 'text-blue-800' : 'text-gray-600'
+                            }`}>
+                              {step.title}
+                            </h3>
+                            <p className={`text-sm ${
+                              step.completed ? 'text-green-600' : index === currentGenerationStep ? 'text-blue-600' : 'text-gray-500'
+                            }`}>
+                              {step.description}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                    
+                    <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                      <div className="text-sm text-gray-600 mb-2">Estimated completion time</div>
+                      <div className="text-2xl font-bold text-gray-900">2-3 minutes</div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        Generating 4,000+ words of government-compliant content
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Results */}
+            {result && !isGenerating && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                {/* Success Alert */}
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>RFP Generated Successfully!</strong> Your comprehensive government RFP document is ready with {result.metadata.wordCount} words of professional content.
+                  </AlertDescription>
+                </Alert>
+
+                {/* Metadata */}
+                <Card className="shadow-lg border-0">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center space-x-2">
+                        <FileCheck className="h-5 w-5 text-green-600" />
+                        <span>RFP Document Generated</span>
+                      </CardTitle>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={showDocumentPreview}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(result.rfpText)}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={downloadRFP}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{result.metadata.wordCount}</div>
+                        <div className="text-sm text-blue-800">Words</div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{Math.ceil(result.metadata.wordCount / 250)}</div>
+                        <div className="text-sm text-green-800">Pages</div>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">{result.metadata.industry}</div>
+                        <div className="text-sm text-purple-800">Industry</div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">Gov</div>
+                        <div className="text-sm text-orange-800">Compliant</div>
+                      </div>
+                    </div>
+
+                    {/* Document Preview */}
+                    <div className="border rounded-lg p-6 bg-white max-h-96 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-sm font-mono text-gray-700">
+                        {result.rfpText.substring(0, 2000)}
+                        {result.rfpText.length > 2000 && "..."}
+                      </pre>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  <strong>Generation Failed:</strong> {error}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="shadow-lg border-0">
+            <Card className="shadow-lg border-0 sticky top-24">
               <CardHeader>
-                <CardTitle className="text-lg">Generation Progress</CardTitle>
+                <CardTitle className="text-lg">RFP Features</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div
-                    className={`flex items-center space-x-3 ${currentStep >= 1 ? "text-blue-600" : "text-gray-400"}`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? "bg-blue-100" : "bg-gray-100"}`}
-                    >
-                      {currentStep > 1 ? <CheckCircle className="h-5 w-5" /> : "1"}
-                    </div>
-                    <span>Project Basics</span>
-                  </div>
-                  <div
-                    className={`flex items-center space-x-3 ${currentStep >= 2 ? "text-blue-600" : "text-gray-400"}`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? "bg-blue-100" : "bg-gray-100"}`}
-                    >
-                      {currentStep > 2 ? <CheckCircle className="h-5 w-5" /> : "2"}
-                    </div>
-                    <span>Project Details</span>
-                  </div>
-                  <div
-                    className={`flex items-center space-x-3 ${currentStep >= 3 ? "text-blue-600" : "text-gray-400"}`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 3 ? "bg-blue-100" : "bg-gray-100"}`}
-                    >
-                      {currentStep > 3 ? <CheckCircle className="h-5 w-5" /> : "3"}
-                    </div>
-                    <span>Compliance</span>
-                  </div>
-                  <div
-                    className={`flex items-center space-x-3 ${currentStep >= 4 ? "text-blue-600" : "text-gray-400"}`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 4 ? "bg-blue-100" : "bg-gray-100"}`}
-                    >
-                      {currentStep >= 4 ? <CheckCircle className="h-5 w-5" /> : "4"}
-                    </div>
-                    <span>Generated RFP</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="text-lg">Compliance Features</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {[
-                    "GFR 2017 Guidelines",
-                    "CVC Compliance",
-                    "Make in India",
-                    "Digital India",
-                    "MSME Preferences",
-                    "Bilingual Support",
+                    "GFR 2017 Compliance",
+                    "CVC Guidelines Integration",
+                    "Make in India Requirements",
+                    "Bilingual Headers (Hindi/English)",
+                    "Technical Specifications",
+                    "Evaluation Criteria",
+                    "Legal & Contract Terms",
+                    "Procurement Schedule",
+                    "4000+ Professional Words",
+                    "Government Formatting"
                   ].map((feature) => (
                     <div key={feature} className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                       <span className="text-sm">{feature}</span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="shadow-lg border-0">
+              <CardHeader>
+                <CardTitle className="text-lg">Document Sections</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="font-semibold text-gray-700">✓ Executive Summary</div>
+                  <div className="font-semibold text-gray-700">✓ Project Background</div>
+                  <div className="font-semibold text-gray-700">✓ Scope of Work</div>
+                  <div className="font-semibold text-gray-700">✓ Technical Requirements</div>
+                  <div className="font-semibold text-gray-700">✓ Contractor Qualifications</div>
+                  <div className="font-semibold text-gray-700">✓ Evaluation Criteria</div>
+                  <div className="font-semibold text-gray-700">✓ Submission Requirements</div>
+                  <div className="font-semibold text-gray-700">✓ Contract Terms</div>
+                  <div className="font-semibold text-gray-700">✓ Compliance & Transparency</div>
+                  <div className="font-semibold text-gray-700">✓ Procurement Schedule</div>
+                  <div className="font-semibold text-gray-700">✓ Appendices & References</div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
+
+      {/* Document Preview Modal */}
+      {result && getDocumentData() && (
+        <DocumentPreview
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          rfpData={getDocumentData()!}
+        />
+      )}
+
+      {/* Success Notification */}
+      {result && (
+        <SuccessNotification
+          isVisible={showSuccessNotification}
+          onClose={() => setShowSuccessNotification(false)}
+          onPreview={showDocumentPreview}
+          onDownload={downloadRFP}
+          onCopy={() => copyToClipboard(result.rfpText)}
+          metadata={{
+            projectName: formData.projectName || 'Unnamed Project',
+            wordCount: result.rfpText.split(/\s+/).length,
+            industry: formData.industry || 'General'
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -277,7 +277,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 GovRFP360AI. All rights reserved. Built for Indian Government Procurement.</p>
+            <p>&copy; {new Date().getFullYear()} GovRFP360AI. All rights reserved. Built for Indian Government Procurement.</p>
           </div>
         </div>
       </footer>
