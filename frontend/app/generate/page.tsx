@@ -240,10 +240,20 @@ export default function GeneratePage() {
       case 2:
         return formData.projectDescription && formData.location
       case 3:
-        return (formData.disciplines?.length || 0) > 0 && (formData.requirements?.length || 0) > 0
+        // Allow step 3 even if disciplines aren't selected - show warning instead
+        return (formData.requirements?.length || 0) > 0
       default:
         return true
     }
+  }
+
+  const canProceedToGenerate = () => {
+    // More comprehensive validation for final generation
+    return formData.projectName && 
+           formData.industry && 
+           formData.projectType && 
+           formData.projectDescription && 
+           ((formData.disciplines?.length || 0) > 0 || (formData.requirements?.length || 0) > 0)
   }
 
   return (
@@ -288,35 +298,78 @@ export default function GeneratePage() {
                 <Card className="shadow-lg border-0">
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-4">
-                      {[1, 2, 3].map((step) => (
-                        <div key={step} className="flex items-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            currentStep === step 
-                              ? 'bg-blue-600 text-white' 
-                              : currentStep > step 
-                                ? 'bg-green-600 text-white' 
-                                : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {currentStep > step ? <CheckCircle className="h-4 w-4" /> : step}
+                      {[1, 2, 3].map((step) => {
+                        const isCompleted = validateStep(step) && currentStep > step
+                        const isCurrent = currentStep === step
+                        const hasErrors = step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ||
+                                        step === 2 && (!formData.projectDescription || !formData.location) ||
+                                        step === 3 && !canProceedToGenerate()
+                        
+                        return (
+                          <div key={step} className="flex items-center">
+                            <button
+                              onClick={() => setCurrentStep(step)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                                isCurrent
+                                  ? 'bg-blue-600 text-white' 
+                                  : isCompleted
+                                    ? 'bg-green-600 text-white' 
+                                    : hasErrors && step < currentStep
+                                      ? 'bg-amber-500 text-white'
+                                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {isCompleted ? <CheckCircle className="h-4 w-4" /> : step}
+                            </button>
+                            {step < 3 && (
+                              <div className={`w-16 h-1 mx-2 ${
+                                isCompleted ? 'bg-green-600' : 'bg-gray-200'
+                              }`} />
+                            )}
                           </div>
-                          {step < 3 && (
-                            <div className={`w-16 h-1 mx-2 ${
-                              currentStep > step ? 'bg-green-600' : 'bg-gray-200'
-                            }`} />
-                          )}
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                     <div className="flex justify-between mt-2 text-sm">
-                      <span className={currentStep >= 1 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                      <button
+                        onClick={() => setCurrentStep(1)}
+                        className={`transition-colors ${
+                          currentStep >= 1 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
+                        }`}
+                      >
                         Project Basics
-                      </span>
-                      <span className={currentStep >= 2 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        {!formData.projectName || !formData.industry || !formData.projectType ? (
+                          <span className="text-amber-500 ml-1">*</span>
+                        ) : (
+                          <span className="text-green-500 ml-1">✓</span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep(2)}
+                        className={`transition-colors ${
+                          currentStep >= 2 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
+                        }`}
+                      >
                         Details & Scope
-                      </span>
-                      <span className={currentStep >= 3 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        {!formData.projectDescription || !formData.location ? (
+                          <span className="text-amber-500 ml-1">*</span>
+                        ) : (
+                          <span className="text-green-500 ml-1">✓</span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep(3)}
+                        className={`transition-colors ${
+                          currentStep >= 3 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
+                        }`}
+                      >
                         Requirements
-                      </span>
+                        {(formData.requirements?.length || 0) === 0 ? (
+                          <span className="text-amber-500 ml-1">*</span>
+                        ) : (
+                          <span className="text-green-500 ml-1">✓</span>
+                        )}
+                      </button>
                     </div>
                   </CardContent>
                 </Card>
@@ -483,6 +536,21 @@ export default function GeneratePage() {
                         {/* Disciplines */}
                         <div className="space-y-3">
                           <Label>Disciplines/Expertise Required *</Label>
+                          {!formData.industry && (
+                            <Alert className="border-amber-200 bg-amber-50">
+                              <AlertTriangle className="h-4 w-4 text-amber-600" />
+                              <AlertDescription className="text-amber-800">
+                                <strong>Industry Required:</strong> Please go back to Step 1 and select an industry to view available disciplines.
+                                <Button
+                                  variant="link"
+                                  className="p-0 ml-2 h-auto text-amber-700 underline"
+                                  onClick={() => setCurrentStep(1)}
+                                >
+                                  Go to Step 1
+                                </Button>
+                              </AlertDescription>
+                            </Alert>
+                          )}
                           <Select
                             onValueChange={(value) => addToArray('disciplines', value)}
                             disabled={!availableDisciplines.length}
@@ -491,7 +559,9 @@ export default function GeneratePage() {
                               <SelectValue placeholder={
                                 availableDisciplines.length 
                                   ? "Add discipline..." 
-                                  : "Select industry first"
+                                  : formData.industry 
+                                    ? "No disciplines available for this industry"
+                                    : "Select industry first"
                               } />
                             </SelectTrigger>
                             <SelectContent>
@@ -517,6 +587,11 @@ export default function GeneratePage() {
                               </Badge>
                             ))}
                           </div>
+                          {formData.industry && availableDisciplines.length === 0 && (
+                            <p className="text-sm text-gray-500">
+                              No predefined disciplines available for {formData.industry}. You can add custom requirements below.
+                            </p>
+                          )}
                         </div>
 
                         <Separator />
@@ -669,14 +744,25 @@ export default function GeneratePage() {
                         Next
                       </Button>
                     ) : (
-                      <Button
-                        onClick={handleGenerate}
-                        disabled={!validateStep(currentStep) || isGenerating}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      >
-                        <Wand2 className="h-4 w-4 mr-2" />
-                        Generate RFP
-                      </Button>
+                      <div className="flex flex-col items-end space-y-2">
+                        {!canProceedToGenerate() && (
+                          <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded border">
+                            {!formData.projectName && "• Project name required"}
+                            {!formData.industry && "• Industry selection required"}
+                            {!formData.projectType && "• Project type required"}
+                            {!formData.projectDescription && "• Project description required"}
+                            {(formData.disciplines?.length || 0) === 0 && (formData.requirements?.length || 0) === 0 && "• At least one discipline or requirement needed"}
+                          </div>
+                        )}
+                        <Button
+                          onClick={handleGenerate}
+                          disabled={!canProceedToGenerate() || isGenerating}
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        >
+                          <Wand2 className="h-4 w-4 mr-2" />
+                          Generate RFP
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

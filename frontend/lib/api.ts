@@ -148,5 +148,55 @@ export const disciplineOptions = {
     'Digital Learning',
     'Assessment Systems',
     'Educational Research'
+  ],
+  Transportation: [
+    'Transportation Planning',
+    'Traffic Management',
+    'Public Transit Systems',
+    'Railway Engineering',
+    'Aviation Systems',
+    'Maritime Engineering',
+    'Logistics Management',
+    'Smart Transportation'
+  ],
+  Energy: [
+    'Power Generation',
+    'Renewable Energy Systems',
+    'Grid Management',
+    'Energy Efficiency',
+    'Solar Engineering',
+    'Wind Energy',
+    'Hydroelectric Systems',
+    'Energy Storage'
+  ],
+  Defense: [
+    'Defense Systems',
+    'Cybersecurity',
+    'Military Engineering',
+    'Communications Systems',
+    'Surveillance Technology',
+    'Logistics Support',
+    'Training Systems',
+    'Strategic Planning'
+  ],
+  Agriculture: [
+    'Agricultural Engineering',
+    'Irrigation Systems',
+    'Crop Management',
+    'Food Processing',
+    'Farm Automation',
+    'Soil Management',
+    'Agricultural Technology',
+    'Supply Chain Management'
+  ],
+  Construction: [
+    'Project Management',
+    'Structural Engineering',
+    'Construction Technology',
+    'Building Materials',
+    'Safety Management',
+    'Quality Control',
+    'Green Building',
+    'Construction Planning'
   ]
 }
