@@ -13,10 +13,10 @@ class GeminiService {
     }
     
     this.generationConfig = {
-      temperature: 0.4,
-      topP: 0.9,
+      temperature: 0.3,
+      topP: 0.95,
       topK: 40,
-      maxOutputTokens: 10000,
+      maxOutputTokens: 15000,
     };
   }
 
@@ -29,7 +29,7 @@ class GeminiService {
       console.log('🤖 Generating text with Gemini...');
       console.log('📝 Prompt length:', prompt.length, 'characters');
       
-      // Use Gemini 1.5 Flash for faster responses
+      // Use Gemini 1.5 Pro for more comprehensive responses
       const model = this.genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash",
         generationConfig: this.generationConfig
@@ -62,25 +62,196 @@ class GeminiService {
       // Use the prompt builder to create a comprehensive prompt
       const structuredPrompt = promptBuilder.buildRfpPrompt(userInput);
       
-      // Enhance the prompt for more comprehensive output
-      const enhancedPrompt = `${structuredPrompt}
+      // Enhance the prompt for more comprehensive output with Indian Government focus
+      const enhancedPrompt = `You are an expert Indian Government procurement specialist with 20+ years of experience creating comprehensive, professional-grade RFP documents. You MUST generate a complete, detailed RFP that follows all Indian Government standards.
 
-IMPORTANT INSTRUCTIONS FOR COMPREHENSIVE RFP GENERATION:
+CRITICAL INSTRUCTION: Generate a COMPLETE 4,000-6,000 word RFP document. DO NOT provide disclaimers, excuses, or incomplete responses. Generate the FULL document as requested with extensive detail in every section.
 
-1. Generate a COMPLETE, PROFESSIONAL RFP document with ALL sections fully detailed
-2. The response should be 3000-5000 words minimum for a comprehensive government RFP
-3. Include specific technical requirements relevant to ${userInput.industry} industry
-4. Add detailed evaluation criteria with specific scoring methodologies
-5. Include comprehensive compliance and regulatory requirements
-6. Provide detailed project phases with specific deliverables and timelines
-7. Add extensive contractor qualification requirements
-8. Include risk management and mitigation strategies
-9. Provide detailed cost structures and payment terms
-10. Add comprehensive appendices and reference materials
+PROJECT DETAILS:
+- Project: ${userInput.projectName}
+- Industry: ${userInput.industry}
+- Type: ${userInput.projectType}
+- Budget: ${userInput.budget}
+- Timeline: ${userInput.timeline}
+- Location: ${userInput.location}
+- Description: ${userInput.projectDescription || 'Comprehensive project implementation'}
+- Requirements: ${Array.isArray(userInput.requirements) ? userInput.requirements.join(', ') : 'As specified in project scope'}
 
-Generate a complete, professional-grade RFP that would be suitable for actual government procurement. Make it detailed, thorough, and industry-specific for ${userInput.industry} ${userInput.projectType} projects.
+MANDATORY REQUIREMENTS - GENERATE ALL SECTIONS COMPLETELY:
+1. Create a MINIMUM 4,000-6,000 word comprehensive Indian Government RFP
+2. Use proper Indian Government RFP format with official terminology
+3. Include specific Indian compliance requirements (GFR 2017, CVC, Make in India)
+4. Generate realistic, detailed content with specific numbers, dates, and requirements
+5. Include proper government nomenclature and formatting
+6. NO PLACEHOLDERS - Use realistic specific details throughout
+7. Write each section with comprehensive detail, not summary points
+8. Include extensive technical specifications relevant to ${userInput.industry}
+9. Provide complete contract terms, evaluation criteria, and submission requirements
+10. Generate bilingual headers and key terms (English/Hindi) as shown in government documents
 
-Focus on creating VALUE and COMPREHENSIVENESS rather than brevity.`;
+DETAILED SECTION REQUIREMENTS - EACH SECTION MUST BE COMPREHENSIVE:
+
+SECTION 1: EXECUTIVE SUMMARY (500-600 words)
+Write a comprehensive executive summary including:
+- Detailed project overview with specific government department identification
+- Complete budget breakdown in Indian Rupees with phase-wise allocation
+- Detailed timeline with Indian financial year format (2024-25, 2025-26, 2026-27)
+- Comprehensive compliance requirements (GFR 2017, CVC, Make in India, Digital India)
+- Strategic importance and detailed government priority alignment
+- Specific Atmanirbhar Bharat and Digital India integration details
+- Detailed project impact and expected outcomes
+
+SECTION 2: PROJECT BACKGROUND & OBJECTIVES (700-900 words)
+Write extensive background covering:
+- Detailed government policy context and strategic alignment
+- Comprehensive Digital India, Atmanirbhar Bharat integration
+- Detailed environmental/social impact assessment
+- Extensive stakeholder analysis and government department coordination
+- Long-term strategic goals with specific measurable outcomes
+- Detailed reference to relevant government schemes and initiatives
+- Current challenges and how this project addresses them
+- Expected benefits to citizens and government operations
+
+SECTION 3: COMPREHENSIVE SCOPE OF WORK (1200-1800 words)
+Break into 4 detailed phases with extensive details:
+- Phase 1: Planning & Design (6 months) - comprehensive requirements, all clearances, detailed approvals process
+- Phase 2: Implementation & Development (18 months) - specific deliverables, detailed milestones, quality checkpoints
+- Phase 3: Testing & Deployment (9 months) - extensive acceptance criteria, government approval process, validation procedures
+- Phase 4: Handover & Maintenance (3 months) - detailed warranty terms, comprehensive support, knowledge transfer protocols
+
+For each phase, include:
+- Detailed deliverables with specifications
+- Comprehensive acceptance criteria
+- Specific government approval processes required
+- Risk mitigation strategies
+- Quality assurance measures
+- Performance metrics and KPIs
+
+SECTION 4: TECHNICAL REQUIREMENTS (900-1200 words)
+Provide extensive technical specifications:
+- Detailed technical specifications with specific Indian Standards (IS codes) and numbers
+- Comprehensive BIS certification requirements and testing protocols
+- Detailed performance parameters and measurement criteria
+- Extensive integration requirements with existing government systems
+- Comprehensive security and compliance specifications (CERT-In guidelines)
+- Detailed local content requirements (minimum 60% as per Make in India) with breakdown
+- Extensive quality assurance and testing methodologies
+- Detailed interoperability requirements
+- Specific technical standards and compliance requirements
+
+SECTION 5: CONTRACTOR QUALIFICATIONS (700-900 words)
+Comprehensive qualification requirements:
+- Detailed mandatory qualifications (registration, GST, experience criteria)
+- Specific financial capability requirements with exact turnover criteria
+- Comprehensive technical team qualifications and certifications required
+- Detailed past performance requirements with government references
+- Extensive MSME preferences and startup India benefits
+- Detailed local supplier advantages and preferences
+- Specific experience requirements in ${userInput.industry} sector
+- Required certifications and compliance documentation
+
+SECTION 6: EVALUATION CRITERIA (600-800 words)
+Detailed evaluation methodology:
+- Comprehensive technical evaluation (70% weightage) with detailed sub-criteria and scoring
+- Detailed financial evaluation (30% weightage) with L1 pricing methodology explanation
+- Extensive MSME preferences and local supplier benefits (additional 5-10%)
+- Detailed scoring methodology with specific point allocation for each criterion
+- Comprehensive two-stage bid evaluation process (technical + financial)
+- Detailed quality and past performance scoring methodology
+- Specific evaluation timelines and procedures
+
+SECTION 7: SUBMISSION REQUIREMENTS (500-700 words)
+Complete submission guidelines:
+- Exhaustive list of required documents with specific formats
+- Detailed Earnest Money Deposit (EMD) requirements and format specifications
+- Comprehensive performance guarantee specifications
+- Detailed format requirements and submission process
+- Extensive pre-bid meeting and clarification process
+- Comprehensive document authentication requirements
+- Specific submission deadlines and procedures
+- Technical and financial proposal format requirements
+
+SECTION 8: CONTRACT TERMS & CONDITIONS (900-1200 words)
+Extensive contract provisions:
+- Detailed payment terms as per GFR 2017 guidelines with specific schedules
+- Comprehensive performance guarantees and penalty clauses
+- Detailed risk allocation and force majeure clauses
+- Extensive intellectual property rights and technology transfer provisions
+- Comprehensive dispute resolution mechanism (arbitration as per Indian laws)
+- Detailed governing law and jurisdiction (Indian courts)
+- Extensive termination clauses and exit procedures
+- Specific warranty and maintenance terms
+
+SECTION 9: COMPLIANCE & TRANSPARENCY (600-800 words)
+Comprehensive compliance requirements:
+- Detailed Central Vigilance Commission (CVC) compliance requirements
+- Comprehensive integrity pact mandatory provisions
+- Extensive Right to Information (RTI) compliance details
+- Detailed anti-corruption measures and transparency protocols
+- Comprehensive conflict of interest declarations
+- Detailed whistleblower protection mechanisms
+- Specific audit and monitoring requirements
+- Transparency and accountability measures
+
+SECTION 10: PROCUREMENT SCHEDULE (400-500 words)
+Detailed timeline with specific information:
+- Comprehensive timeline with exact dates and timings
+- Detailed pre-bid meeting schedule and venue information
+- Specific bid submission deadlines and process details
+- Extensive evaluation timelines and methodology
+- Detailed contract award and commencement dates
+- Comprehensive appeal process and timelines
+- Specific milestones and checkpoints
+- Detailed project delivery schedule
+
+SECTION 11: APPENDICES & REFERENCES (500-700 words)
+Comprehensive supporting information:
+- Extensive list of relevant Indian Standards and regulations with specific codes
+- Detailed government policy references and guidelines
+- Comprehensive format templates and proformas
+- Detailed compliance checklists and self-certification formats
+- Extensive contact information for different types of queries
+- Comprehensive legal disclaimers and government protections
+- Specific reference materials and documentation
+- Detailed glossary of terms and definitions
+
+FORMATTING REQUIREMENTS:
+- Use proper government letterhead format with official seals
+- Include NIT (Notice Inviting Tender) numbering system
+- Add government seal and signature areas
+- Include bilingual headers for key sections (Hindi/English)
+- Use proper financial year format (2024-25)
+- Add disclaimer and legal notices
+
+CONTENT QUALITY REQUIREMENTS:
+- Industry-specific technical requirements for ${userInput.industry}
+- Realistic budget estimates in Indian Rupees (₹)
+- Practical timelines considering Indian government processes
+- Comprehensive risk mitigation strategies
+- Detailed quality assurance and testing protocols
+- Specific performance metrics and KPIs
+
+INDIAN GOVERNMENT SPECIFIC ELEMENTS:
+- Reference to specific ministries/departments
+- Compliance with Digital India initiatives
+- Make in India and Atmanirbhar Bharat provisions
+- MSME development and local supplier preferences
+- Environmental clearance and regulatory approvals
+- GST implications and tax compliance
+- Labor law compliance requirements
+- Data localization and cybersecurity requirements
+
+BILINGUAL CONTENT REQUIREMENTS:
+- Key section headers in both Hindi and English
+- Important terms and conditions in both languages
+- Contact information in bilingual format
+- Government seal descriptions in both languages
+
+Generate a comprehensive, professional-grade Indian Government RFP that would be suitable for actual government procurement. Make it detailed, thorough, and industry-specific for ${userInput.industry} ${userInput.projectType} projects.
+
+The response must be AT LEAST 4,000 words with proper sectioning, detailed requirements, comprehensive technical specifications, and all mandatory Indian government procurement elements. Focus on creating a complete, usable government document rather than a summary.
+
+IMPORTANT: Ensure every section is fully detailed with specific requirements, procedures, and compliance measures. This should be a complete government procurement document that can be used as-is for actual tendering.`;
       
       console.log('📝 ENHANCED STRUCTURED PROMPT CREATED:');
       console.log('=====================================');
@@ -166,245 +337,249 @@ Focus on creating VALUE and COMPREHENSIVENESS rather than brevity.`;
     const isRFI = prompt.toLowerCase().includes('rfi') || prompt.toLowerCase().includes('request for information');
     const documentType = isRFI ? 'Request for Information (RFI)' : 'Request for Proposal (RFP)';
     
-    return `# ${documentType}: ${projectName}
+    return `# निविदा सूचना / NOTICE INVITING TENDER (NIT)
+# ${documentType}: ${projectName}
 
-## EXECUTIVE SUMMARY
+**NIT No.:** GovRFP/${new Date().getFullYear()}-${(new Date().getFullYear() + 1).toString().slice(-2)}/${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}
+**Date of Issue:** ${new Date().toLocaleDateString('en-IN')}
+**Government of India | भारत सरकार**
 
-The Government/Agency is seeking qualified contractors to provide comprehensive ${projectType.toLowerCase()} services for the ${projectName}. This ${documentType} outlines the project requirements, scope of work, technical specifications, and submission guidelines for this ${industry} industry initiative.
+---
 
-**Project Overview:**
-- **Project Name:** ${projectName}
-- **Industry:** ${industry}
-- **Project Type:** ${projectType}
-- **Estimated Budget:** ${budget}
-- **Project Timeline:** ${timeline}
+## EXECUTIVE SUMMARY | कार्यकारी सारांश
 
-## PROJECT BACKGROUND AND OBJECTIVES
+The Government of India/State Government is seeking qualified contractors to provide comprehensive ${projectType.toLowerCase()} services for the ${projectName}. This ${documentType} outlines the project requirements, scope of work, technical specifications, and submission guidelines for this ${industry} industry initiative in accordance with Government Financial Rules (GFR) 2017 and Central Vigilance Commission guidelines.
+
+**परियोजना अवलोकन / Project Overview:**
+- **Project Name / परियोजना का नाम:** ${projectName}
+- **Industry / उद्योग:** ${industry}
+- **Project Type / परियोजना प्रकार:** ${projectType}
+- **Estimated Budget / अनुमानित बजट:** ${budget}
+- **Project Timeline / परियोजना समयसीमा:** ${timeline}
+- **Financial Year / वित्तीय वर्ष:** ${new Date().getFullYear()}-${(new Date().getFullYear() + 1).toString().slice(-2)}
+
+## COMPLIANCE WITH INDIAN GOVERNMENT REGULATIONS | भारत सरकार के नियमों का अनुपालन
+
+This tender is issued in compliance with:
+- **Government Financial Rules (GFR) 2017** - वित्तीय नियम 2017
+- **Central Vigilance Commission (CVC) Guidelines** - केंद्रीय सतर्कता आयोग दिशानिर्देश
+- **Make in India Policy** - मेक इन इंडिया नीति
+- **Atmanirbhar Bharat Abhiyan** - आत्मनिर्भर भारत अभियान
+- **Digital India Initiative** - डिजिटल इंडिया पहल
+- **MSME Development Act, 2006** - सूक्ष्म, लघु और मध्यम उद्यम विकास अधिनियम
+
+## PROJECT BACKGROUND AND OBJECTIVES | परियोजना पृष्ठभूमि और उद्देश्य
 
 ${description}
 
-This project represents a critical initiative requiring specialized expertise in ${industry.toLowerCase()} operations and ${projectType.toLowerCase()} methodologies. The successful contractor will demonstrate proven experience, technical competence, and unwavering commitment to quality delivery within the specified timeframe and budget parameters.
+This project represents a critical initiative under the Government of India's infrastructure development program, requiring specialized expertise in ${industry.toLowerCase()} operations and ${projectType.toLowerCase()} methodologies. The successful contractor will demonstrate proven experience, technical competence, and unwavering commitment to quality delivery within the specified timeframe and budget parameters, while ensuring compliance with all Indian regulations and standards.
 
-### Primary Objectives
-1. **Technical Excellence:** Deliver innovative solutions meeting all specified technical requirements
-2. **Quality Assurance:** Ensure all deliverables exceed industry standards and regulatory compliance
-3. **Project Management:** Provide comprehensive coordination with stakeholder engagement
-4. **Knowledge Transfer:** Deliver complete documentation and training for sustainable operations
+### Primary Objectives | मुख्य उद्देश्य
+1. **Technical Excellence | तकनीकी उत्कृष्टता:** Deliver innovative solutions meeting all specified technical requirements and Indian Standards (IS)
+2. **Quality Assurance | गुणवत्ता आश्वासन:** Ensure all deliverables exceed industry standards and regulatory compliance as per BIS standards
+3. **Make in India Compliance | मेक इन इंडिया अनुपालन:** Promote local manufacturing and indigenous technology development
+4. **Skill Development | कौशल विकास:** Provide training and knowledge transfer to Indian personnel
 
-## DETAILED SCOPE OF WORK
+## DETAILED SCOPE OF WORK | कार्य का विस्तृत दायरा
 
-### Phase 1: Planning and Design (20% of timeline)
-- **Requirements Analysis:** Comprehensive review of all technical and functional requirements
-- **System Design:** Detailed architectural design and technical specifications
-- **Stakeholder Engagement:** Regular consultation with key project stakeholders
-- **Risk Assessment:** Identification and mitigation strategies for project risks
+### Phase 1: Planning and Design | चरण 1: योजना और डिजाइन (20% of timeline)
+- **Requirements Analysis | आवश्यकता विश्लेषण:** Comprehensive review of all technical and functional requirements as per Indian standards
+- **System Design | सिस्टम डिजाइन:** Detailed architectural design and technical specifications complying with IS codes
+- **Stakeholder Engagement | हितधारक सहभागिता:** Regular consultation with government departments and agencies
+- **Environmental Clearance | पर्यावरण मंजूरी:** Obtain necessary environmental and regulatory clearances
 
-### Phase 2: Implementation and Development (60% of timeline)
-- **Core Development:** Implementation of primary system components and functionality
-- **Integration Services:** Seamless integration with existing systems and infrastructure
-- **Quality Control:** Continuous testing and validation throughout development
-- **Progress Reporting:** Regular status updates and milestone confirmations
+### Phase 2: Implementation and Development | चरण 2: कार्यान्वयन और विकास (60% of timeline)
+- **Core Development | मुख्य विकास:** Implementation of primary system components with preference to Indian suppliers
+- **Integration Services | एकीकरण सेवाएं:** Seamless integration with existing government systems and infrastructure
+- **Quality Control | गुणवत्ता नियंत्रण:** Continuous testing and validation as per Indian testing standards
+- **Progress Reporting | प्रगति रिपोर्टिंग:** Regular status updates to designated government authorities
 
-### Phase 3: Testing and Deployment (15% of timeline)
-- **System Testing:** Comprehensive testing including unit, integration, and user acceptance testing
-- **Performance Validation:** Verification of all performance criteria and benchmarks
-- **Deployment Planning:** Structured rollout with minimal operational disruption
-- **Go-Live Support:** Dedicated support during initial operational period
+### Phase 3: Testing and Deployment | चरण 3: परीक्षण और तैनाती (15% of timeline)
+- **System Testing | सिस्टम परीक्षण:** Comprehensive testing including acceptance testing by government technical committee
+- **Performance Validation | प्रदर्शन सत्यापन:** Verification as per performance criteria and government specifications
+- **Deployment Planning | तैनाती योजना:** Structured rollout with minimal operational disruption
+- **Go-Live Support | लाइव सपोर्ट:** Dedicated support during initial operational period
 
-### Phase 4: Documentation and Handover (5% of timeline)
-- **Technical Documentation:** Complete system documentation and operational manuals
-- **User Training:** Comprehensive training programs for end users and administrators
-- **Knowledge Transfer:** Transfer of all technical knowledge and maintenance procedures
-- **Warranty Support:** Initial warranty period with dedicated support services
+### Phase 4: Documentation and Handover | चरण 4: प्रलेखन और हस्तांतरण (5% of timeline)
+- **Technical Documentation | तकनीकी प्रलेखन:** Complete documentation in English and Hindi as required
+- **User Training | उपयोगकर्ता प्रशिक्षण:** Comprehensive training programs for government personnel
+- **Knowledge Transfer | ज्ञान स्थानांतरण:** Transfer of all technical knowledge and maintenance procedures
+- **Warranty Support | वारंटी सहायता:** Minimum 3-year warranty period with comprehensive support
 
-## TECHNICAL REQUIREMENTS AND SPECIFICATIONS
+## TECHNICAL REQUIREMENTS AND SPECIFICATIONS | तकनीकी आवश्यकताएं और विनिर्देश
 
-### Core Technical Requirements
-- **Industry Standards Compliance:** Full adherence to all applicable ${industry} industry standards and best practices
-- **Regulatory Compliance:** Compliance with all federal, state, and local regulations
-- **Security Standards:** Implementation of robust security measures and data protection protocols
-- **Performance Criteria:** Meeting or exceeding all specified performance benchmarks
-- **Scalability Requirements:** Solution must accommodate future growth and expansion needs
+### Core Technical Requirements | मुख्य तकनीकी आवश्यकताएं
+- **Indian Standards Compliance | भारतीय मानक अनुपालन:** Full adherence to applicable Indian Standards (IS) and Bureau of Indian Standards (BIS)
+- **Regulatory Compliance | नियामक अनुपालन:** Compliance with all Central and State government regulations
+- **Security Standards | सुरक्षा मानक:** Implementation as per Indian Cyber Security guidelines and CERT-In recommendations
+- **Local Content Requirements | स्थानीय सामग्री आवश्यकताएं:** Minimum 50% local content as per Make in India policy
+- **Scalability Requirements | स्केलेबिलिटी आवश्यकताएं:** Solution must accommodate pan-India deployment capability
 
-### Infrastructure and Integration
-- **System Integration:** Seamless integration with existing IT infrastructure and legacy systems
-- **Data Migration:** Secure and accurate migration of existing data with zero data loss
-- **Network Requirements:** Optimal utilization of existing network infrastructure
-- **Backup and Recovery:** Comprehensive backup and disaster recovery capabilities
-- **Monitoring and Maintenance:** Integrated monitoring tools for proactive maintenance
+### Digital India Integration | डिजिटल इंडिया एकीकरण
+- **API Integration | एपीआई एकीकरण:** Compatible with India Stack and government digital platforms
+- **Data Localization | डेटा स्थानीयकरण:** All data storage within Indian territory as per data protection laws
+- **Interoperability | अंतर-संचालनीयता:** Seamless integration with existing government IT infrastructure
+- **Cloud Compliance | क्लाउड अनुपालन:** Adherence to MeitY cloud computing guidelines and empanelment requirements
 
-### Quality Assurance Standards
-- **Testing Protocols:** Comprehensive testing methodologies including automated and manual testing
-- **Documentation Standards:** Complete technical and user documentation following industry standards
-- **Code Quality:** Adherence to coding standards and best practices for maintainability
-- **Performance Monitoring:** Continuous performance monitoring and optimization
-- **Security Auditing:** Regular security assessments and vulnerability testing
+## CONTRACTOR QUALIFICATIONS AND REQUIREMENTS | ठेकेदार योग्यता और आवश्यकताएं
 
-## CONTRACTOR QUALIFICATIONS AND REQUIREMENTS
+### Mandatory Qualifications | अनिवार्य योग्यताएं
+- **Company Registration | कंपनी पंजीकरण:** Valid registration under Companies Act, 2013 or relevant Indian laws
+- **GST Registration | जीएसटी पंजीकरण:** Valid GST registration certificate
+- **Experience Requirements | अनुभव आवश्यकताएं:** Minimum 7 years of demonstrated experience in ${industry.toLowerCase()} projects in India
+- **Financial Capability | वित्तीय क्षमता:** Annual turnover of minimum ₹X crores in last 3 financial years
+- **Technical Certifications | तकनीकी प्रमाणन:** Relevant certifications from recognized Indian/International bodies
 
-### Mandatory Qualifications
-- **Experience Requirements:** Minimum 7 years of demonstrated experience in ${industry.toLowerCase()} projects
-- **Project Portfolio:** Proven track record of successful ${projectType.toLowerCase()} implementations
-- **Technical Certifications:** Current and relevant professional certifications in required technologies
-- **Financial Stability:** Demonstrated financial capacity and bonding capability for project size
-- **Insurance Coverage:** Comprehensive general liability and professional indemnity insurance
+### Preferred Qualifications | पसंदीदा योग्यताएं
+- **Government Experience | सरकारी अनुभव:** Previous experience with Central/State government projects
+- **MSME Registration | एमएसएमई पंजीकरण:** Valid MSME registration for applicable benefits
+- **Quality Certifications | गुणवत्ता प्रमाणन:** ISO certifications relevant to project scope
+- **Local Presence | स्थानीय उपस्थिति:** Established office and operations in India
+- **Startup India Recognition | स्टार्टअप इंडिया मान्यता:** Recognition under Startup India initiative (if applicable)
 
-### Preferred Qualifications
-- **Government Experience:** Previous experience with government or public sector projects
-- **Industry Recognition:** Professional recognition or awards for excellence in ${industry.toLowerCase()} solutions
-- **Local Presence:** Established local presence with dedicated project support capabilities
-- **Sustainability Practices:** Commitment to environmental sustainability and responsible business practices
-- **Innovation Track Record:** History of innovative solutions and cutting-edge technology implementation
+### Financial Requirements | वित्तीय आवश्यकताएं
+- **Earnest Money Deposit (EMD) | बयाना राशि:** ₹X lakhs (as per GFR guidelines)
+- **Performance Guarantee | प्रदर्शन गारंटी:** 10% of contract value as bank guarantee
+- **Income Tax Returns | आयकर रिटर्न:** Last 3 years' filed IT returns
+- **Bank Statements | बैंक विवरण:** Last 6 months' bank statements
+- **Credit Rating | क्रेडिट रेटिंग:** Minimum investment grade credit rating from recognized agency
 
-### Key Personnel Requirements
-- **Project Manager:** PMP certified with minimum 5 years of ${industry.toLowerCase()} project management experience
-- **Technical Lead:** Senior technical expert with deep knowledge of ${industry.toLowerCase()} systems and standards
-- **Quality Assurance Manager:** Experienced QA professional with proven testing methodologies
-- **Support Team:** Dedicated support team with 24/7 availability during critical project phases
+## EVALUATION CRITERIA AND SELECTION PROCESS | मूल्यांकन मानदंड और चयन प्रक्रिया
 
-## EVALUATION CRITERIA AND SELECTION PROCESS
+### Technical Evaluation | तकनीकी मूल्यांकन (70% weighting)
+- **Solution Architecture (25%) | समाधान वास्तुकला:** Innovation, feasibility, and technical soundness
+- **Implementation Methodology (20%) | कार्यान्वयन पद्धति:** Proven methodologies and project management approaches
+- **Local Content Compliance (15%) | स्थानीय सामग्री अनुपालन:** Make in India and Atmanirbhar Bharat compliance
+- **Technical Team Qualifications (10%) | तकनीकी टीम योग्यता:** Expertise and experience of proposed team
 
-### Technical Evaluation (40% weighting)
-- **Solution Architecture:** Innovation, feasibility, and technical soundness of proposed solution
-- **Implementation Methodology:** Proven methodologies and project management approaches
-- **Risk Management:** Comprehensive risk identification and mitigation strategies
-- **Technology Stack:** Appropriateness and sustainability of proposed technology solutions
+### Financial Evaluation | वित्तीय मूल्यांकन (30% weighting)
+- **L1 Price Evaluation | एल1 मूल्य मूल्यांकन:** Competitive pricing analysis
+- **Total Cost of Ownership | स्वामित्व की कुल लागत:** Long-term cost considerations
+- **Payment Terms | भुगतान शर्तें:** Compliance with government payment schedules
+- **Value Engineering | मूल्य इंजीनियरिंग:** Cost optimization proposals
 
-### Experience and Qualifications (30% weighting)
-- **Relevant Experience:** Direct experience with similar ${industry.toLowerCase()} projects and scope
-- **Reference Projects:** Quality and relevance of provided reference projects and client testimonials
-- **Team Qualifications:** Expertise and experience of proposed project team members
-- **Past Performance:** Historical performance on similar projects including schedule and budget adherence
+### Additional Evaluation Parameters | अतिरिक्त मूल्यांकन मापदंड
+- **MSME Preference | एमएसएमई वरीयता:** Additional weightage as per government policy
+- **Local Supplier Preference | स्थानीय आपूर्तिकर्ता वरीयता:** Benefits for local companies
+- **Past Performance | पूर्व प्रदर्शन:** Track record with government projects
+- **Social Impact | सामाजिक प्रभाव:** Contribution to skill development and employment generation
 
-### Cost and Value Proposition (20% weighting)
-- **Total Project Cost:** Competitiveness and reasonableness of total project pricing
-- **Cost Breakdown:** Transparency and detail in cost structure and pricing methodology
-- **Value-Added Services:** Additional services and benefits provided at no extra cost
-- **Long-term Value:** Consideration of total cost of ownership and long-term value proposition
+## SUBMISSION REQUIREMENTS AND GUIDELINES | प्रस्तुति आवश्यकताएं और दिशानिर्देश
 
-### Timeline and Project Management (10% weighting)
-- **Project Schedule:** Realistic and achievable project timeline with clear milestones
-- **Resource Allocation:** Appropriate allocation of resources throughout project lifecycle
-- **Communication Plan:** Effective communication and reporting protocols
-- **Change Management:** Flexibility and responsiveness to project changes and requirements
+### Required Documents | आवश्यक दस्तावेज
+1. **Technical Proposal | तकनीकी प्रस्ताव:** Detailed technical approach and methodology
+2. **Financial Proposal | वित्तीय प्रस्ताव:** Comprehensive pricing with GST implications
+3. **Company Profile | कंपनी प्रोफाइल:** Registration certificates, GST certificate, PAN card
+4. **Experience Certificates | अनुभव प्रमाण पत्र:** Work completion certificates from previous clients
+5. **Financial Documents | वित्तीय दस्तावेज:** Audited balance sheets, IT returns, bank statements
+6. **Compliance Certificates | अनुपालन प्रमाण पत्र:** Various statutory compliance certificates
+7. **Earnest Money Deposit | बयाना राशि:** Valid EMD in prescribed format
 
-## SUBMISSION REQUIREMENTS AND GUIDELINES
+### Submission Guidelines | प्रस्तुति दिशानिर्देश
+- **Language | भाषा:** Documents in English (Hindi translations where required)
+- **Format | प्रारूप:** Hard copies and digital submissions as specified
+- **Validity | वैधता:** Proposals valid for 180 days from submission
+- **Modifications | संशोधन:** No modifications allowed after submission deadline
 
-### Required Proposal Components
-1. **Executive Summary:** Concise overview of proposed solution and key differentiators
-2. **Technical Proposal:** Detailed technical approach, architecture, and implementation plan
-3. **Project Management Plan:** Comprehensive project plan with timeline, resources, and milestones
-4. **Cost Proposal:** Detailed pricing with breakdown by phase, resource, and deliverable
-5. **Company Qualifications:** Corporate profile, certifications, insurance, and financial information
-6. **Team Profiles:** Detailed resumes and qualifications of all key project personnel
-7. **Reference Projects:** Minimum of 3 relevant project references with contact information
-8. **Compliance Matrix:** Detailed response to all RFP requirements and specifications
+## CONTRACT TERMS AND CONDITIONS | अनुबंध नियम और शर्तें
 
-### Submission Format and Requirements
-- **Format:** Electronic submission required in PDF format with searchable text
-- **Page Limits:** Technical proposal limited to 50 pages (excluding appendices and resumes)
-- **Language:** All documentation must be submitted in English
-- **Currency:** All pricing must be in US Dollars (USD)
-- **Validity Period:** Proposals must remain valid for 120 days from submission deadline
+### General Contract Provisions | सामान्य अनुबंध प्रावधान
+- **Contract Type | अनुबंध प्रकार:** Fixed-price contract with milestone-based payments
+- **Governing Law | नियंत्रणकारी कानून:** Indian Contract Act, 1872 and applicable Indian laws
+- **Jurisdiction | न्यायाधिकार:** Courts in [City Name], India
+- **Arbitration | मध्यस्थता:** As per Arbitration and Conciliation Act, 2015
+- **Force Majeure | बल प्रमुख:** As per Indian legal provisions
 
-### Submission Deadline and Process
-- **Submission Deadline:** [To be specified - typically 30-45 days from RFP release]
-- **Submission Method:** Electronic submission via designated procurement portal
-- **Late Submissions:** Late submissions will not be accepted under any circumstances
-- **Proposal Modifications:** Modifications after deadline will not be permitted
+### Payment Terms | भुगतान शर्तें
+- **Advance Payment | अग्रिम भुगतान:** Maximum 20% against bank guarantee
+- **Milestone Payments | मील का पत्थर भुगतान:** Based on deliverable completion and acceptance
+- **GST Compliance | जीएसटी अनुपालन:** All taxes as per prevailing Indian tax laws
+- **TDS Deduction | टीडीएस कटौती:** As per Income Tax Act, 1961
+- **Retention Money | प्रतिधारण राशि:** 10% retained till completion of defect liability period
 
-## CONTRACT TERMS AND CONDITIONS
+### Performance Guarantees | प्रदर्शन गारंटी
+- **Performance Bank Guarantee | प्रदर्शन बैंक गारंटी:** 10% of contract value
+- **Defect Liability Period | दोष दायित्व अवधि:** 36 months from completion
+- **Liquidated Damages | निर्धारित हर्जाना:** As per standard government rates
+- **Penalty Clauses | दंड खंड:** For delays and non-performance
 
-### General Contract Provisions
-- **Contract Type:** Fixed-price contract with performance-based milestones
-- **Contract Duration:** ${timeline} from contract execution to final acceptance
-- **Payment Terms:** Net 30 days upon completion and acceptance of each milestone
-- **Performance Guarantees:** Performance bonds and guarantees as specified in contract terms
-- **Intellectual Property:** Clear definition of intellectual property ownership and licensing
+## INTEGRITY AND TRANSPARENCY MEASURES | अखंडता और पारदर्शिता के उपाय
 
-### Performance and Delivery Requirements
-- **Service Level Agreements:** Specific SLAs for all system components and support services
-- **Penalty Clauses:** Financial penalties for delays or performance shortfalls
-- **Acceptance Criteria:** Clear criteria for milestone acceptance and final system acceptance
-- **Warranty Period:** Minimum 12-month warranty period with comprehensive support
-- **Maintenance Requirements:** Ongoing maintenance and support requirements and costs
+### Central Vigilance Commission Compliance | केंद्रीय सतर्कता आयोग अनुपालन
+- **Integrity Pact | अखंडता समझौता:** Mandatory signing of integrity pact
+- **Conflict of Interest | हितों का टकराव:** Declaration of any conflict of interest
+- **Transparency | पारदर्शिता:** Commitment to transparent business practices
+- **Anti-Corruption | भ्रष्टाचार विरोधी:** Zero tolerance for corrupt practices
 
-### Legal and Regulatory Compliance
-- **Governing Law:** Contract governed by [State/Federal] law and regulations
-- **Dispute Resolution:** Structured dispute resolution process including mediation and arbitration
-- **Insurance Requirements:** Minimum insurance coverage requirements for duration of contract
-- **Security Clearances:** Any required security clearances for personnel and data access
-- **Compliance Auditing:** Right to audit contractor compliance with contract terms and requirements
+### Right to Information (RTI) Compliance | सूचना का अधिकार अनुपालन
+- **Public Disclosure | सार्वजनिक प्रकटीकरण:** Contract details subject to RTI provisions
+- **Document Preservation | दस्तावेज संरक्षण:** Mandatory record keeping as per RTI guidelines
 
-## PROCUREMENT SCHEDULE AND KEY DATES
+## PROCUREMENT SCHEDULE | खरीद अनुसूची
 
-| **Milestone** | **Date** | **Description** |
-|---------------|----------|-----------------|
-| RFP Release | [Date] | Official release of Request for Proposal |
-| Pre-Proposal Conference | [Date] | Optional information session for potential bidders |
-| Questions Deadline | [Date] | Deadline for submission of clarifying questions |
-| Proposal Submission Deadline | [Date] | Final deadline for proposal submission |
-| Proposal Evaluation Period | [Date Range] | Internal evaluation and scoring of all proposals |
-| Finalist Presentations | [Date] | Presentations by selected finalists (if required) |
-| Contract Award Notification | [Date] | Official notification of contract award |
-| Contract Execution | [Date] | Final contract signing and project initiation |
+| **Milestone | मील का पत्थर** | **Date | दिनांक** | **Description | विवरण** |
+|------------|---------|--------------|
+| NIT Publication | निविदा प्रकाशन | [Date] | Notice publication in newspapers and website |
+| Pre-bid Meeting | पूर्व-बोली बैठक | [Date] | Clarification meeting with prospective bidders |
+| Bid Submission Deadline | बोली प्रस्तुति समय सीमा | [Date] | Final deadline for bid submission |
+| Technical Evaluation | तकनीकी मूल्यांकन | [Date Range] | Technical proposal evaluation |
+| Financial Evaluation | वित्तीय मूल्यांकन | [Date Range] | Price bid opening and evaluation |
+| Contract Award | अनुबंध पुरस्कार | [Date] | Letter of award issuance |
+| Work Commencement | कार्य प्रारंभ | [Date] | Project implementation start |
 
-## CONTACT INFORMATION AND COMMUNICATIONS
+## CONTACT INFORMATION | संपर्क जानकारी
 
-### Primary Procurement Contact
-**[Name], Procurement Officer**
-Government Procurement Department
-Address: [Address]
-Email: procurement@government.gov
-Phone: (555) 123-4567
-Fax: (555) 123-4568
+### Tendering Authority | निविदा प्राधिकरण
+**[Name], [Designation]**
+**[Department/Ministry Name]**
+**Government of India | भारत सरकार**
+Address: [Complete Official Address]
+Email: [official.email@gov.in]
+Phone: [Official Contact Number]
 
-### Technical Inquiries
-**[Name], Technical Review Committee Chair**
-Technical Evaluation Department
-Email: technical@government.gov
-Phone: (555) 123-4569
+### Technical Queries | तकनीकी प्रश्न
+**[Name], Technical Officer**
+Email: [technical.email@gov.in]
+Phone: [Technical Contact Number]
 
-### Administrative Questions
-**[Name], Contract Administrator**
-Contract Administration Office
-Email: contracts@government.gov
-Phone: (555) 123-4570
-
-### Communication Protocol
-- All official communications must be in writing via email
-- Responses to inquiries will be provided to all registered bidders
-- No verbal commitments or clarifications will be considered binding
-- All communications must reference the RFP number and project title
+### Commercial Queries | व्यावसायिक प्रश्न
+**[Name], Accounts Officer**
+Email: [accounts.email@gov.in]
+Phone: [Accounts Contact Number]
 
 ---
 
-## APPENDICES
+## APPENDICES | परिशिष्ट
 
-### Appendix A: Technical Specifications
-[Detailed technical specifications and requirements]
+### Appendix A: Technical Specifications | परिशिष्ट ए: तकनीकी विनिर्देश
+[Detailed technical specifications as per Indian Standards]
 
-### Appendix B: Regulatory Requirements
-[Applicable regulations, codes, and compliance requirements]
+### Appendix B: Standard Contract Conditions | परिशिष्ट बी: मानक अनुबंध शर्तें
+[General Financial Rules 2017 based contract conditions]
 
-### Appendix C: Existing System Documentation
-[Current system documentation and integration requirements]
+### Appendix C: Formats and Proformas | परिशिष्ट सी: प्रारूप और प्रोफार्मा
+[Standard government formats for submissions]
 
-### Appendix D: Sample Contract Terms
-[Standard contract terms and conditions template]
+### Appendix D: Compliance Checklist | परिशिष्ट डी: अनुपालन चेकलिस्ट
+[Mandatory compliance requirements checklist]
 
 ---
 
-**IMPORTANT DISCLAIMER:** This ${documentType} represents our commitment to transparent and competitive procurement. All information provided is accurate to the best of our knowledge. Potential contractors are encouraged to conduct their own due diligence and analysis.
+**GOVERNMENT SEAL | सरकारी मुहर**
 
-**Generated Information:**
-- Document Type: ${documentType}
-- Project: ${projectName}
-- Industry: ${industry}
-- Generated: ${new Date().toISOString()}
-- Version: Enhanced Template with Comprehensive Specifications
+**IMPORTANT DISCLAIMER | महत्वपूर्ण अस्वीकरण:** This ${documentType} represents the Government of India's commitment to transparent and competitive procurement. All information provided is accurate to the best of our knowledge. Potential contractors are encouraged to conduct their own due diligence and analysis in accordance with Indian laws and regulations.
 
-*This is an enhanced template response generated due to API configuration limitations. For fully customized AI-powered RFP generation with industry-specific content and intelligent document analysis, please ensure your GEMINI_API_KEY is properly configured and active.*`;
+**Generated Information | उत्पन्न जानकारी:**
+- Document Type | दस्तावेज़ प्रकार: ${documentType}
+- Project | परियोजना: ${projectName}
+- Industry | उद्योग: ${industry}
+- Generated | उत्पन्न: ${new Date().toISOString()}
+- Compliance | अनुपालन: GFR 2017, CVC Guidelines, Make in India Policy
+
+**यह निविदा भारत सरकार की नीतियों और दिशानिर्देशों के अनुसार जारी की गई है।**
+*This tender is issued in accordance with Government of India policies and guidelines.*
+
+**जय हिन्द | Jai Hind**`;
   }
 
   async generateTextWithSystemPrompt(systemPrompt, userPrompt) {
