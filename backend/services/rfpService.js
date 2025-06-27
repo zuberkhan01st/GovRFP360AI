@@ -20,14 +20,11 @@ class RFPService {
       // Step 1: Find relevant documents using RAG
       const relevantDocs = await this.findRelevantDocuments(userInput);
       
-      // Step 2: Build enhanced prompt with RAG context
-      const enhancedPrompt = await this.buildEnhancedPrompt(userInput, relevantDocs);
+      // Step 2: Use Gemini's generateRFP method which includes prompt building
+      const result = await gemini.generateRFP(userInput);
       
-      // Step 3: Generate RFP using LLM with RAG context
-      const generatedRFP = await this.generateWithLLM(enhancedPrompt);
-      
-      // Step 4: Post-process and format the output
-      const formattedRFP = await this.formatRFPOutput(generatedRFP, userInput);
+      // Step 3: Post-process and format the output
+      const formattedRFP = await this.formatRFPOutput(result.rfpText, userInput);
       
       console.log('✅ RFP generation completed successfully');
       
@@ -39,6 +36,7 @@ class RFPService {
           relevanceScore: doc.relevanceScore
         })),
         metadata: {
+          ...result.metadata,
           industry: userInput.industry,
           projectType: userInput.projectType,
           generatedAt: new Date().toISOString(),
