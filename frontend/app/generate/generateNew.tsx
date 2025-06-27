@@ -33,9 +33,6 @@ import {
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { RFPGenerationAPI, RFPGenerationRequest, RFPGenerationResponse, industryOptions, projectTypeOptions, disciplineOptions } from "@/lib/api"
-import DocumentPreview from "@/components/DocumentPreview"
-import SuccessNotification from "@/components/SuccessNotification"
-import RFPContentGenerator, { RFPData } from "@/lib/rfpContentGenerator"
 
 interface LoadingStep {
   id: string
@@ -107,10 +104,6 @@ export default function GeneratePage() {
   const [currentGenerationStep, setCurrentGenerationStep] = useState(0)
   const [result, setResult] = useState<RFPGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
-  // Document preview state
-  const [showPreview, setShowPreview] = useState(false)
-  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
 
   // Dynamic options based on industry
   const [availableDisciplines, setAvailableDisciplines] = useState<string[]>([])
@@ -185,7 +178,6 @@ export default function GeneratePage() {
       const [, apiResult] = await Promise.all([simulationPromise, apiPromise])
       
       setResult(apiResult)
-      setShowSuccessNotification(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate RFP')
     } finally {
@@ -198,12 +190,6 @@ export default function GeneratePage() {
     navigator.clipboard.writeText(text)
   }
 
-  // Show document preview - only works after generation
-  const showDocumentPreview = () => {
-    if (!result) return // Only show preview when we have generated content
-    setShowPreview(true)
-  }
-
   // Download as text file
   const downloadRFP = () => {
     if (!result) return
@@ -211,44 +197,11 @@ export default function GeneratePage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${formData.projectName?.replace(/\s+/g, '_') || 'RFP'}.txt`
+    a.download = `${formData.projectName.replace(/\s+/g, '_')}_RFP.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
-
-  // Prepare document data for preview
-  const getDocumentData = () => {
-    if (!result) {
-      // Generate sample content from form data when no API result is available
-      const rfpData = RFPContentGenerator.createRFPFromForm(formData)
-      const sampleContent = RFPContentGenerator.generateSampleContent(rfpData)
-      
-      return {
-        title: `Request for Proposal - ${formData.projectName}`,
-        content: sampleContent,
-        metadata: {
-          projectName: formData.projectName || 'Unnamed Project',
-          industry: formData.industry || 'General',
-          wordCount: sampleContent.split(/\s+/).length,
-          generatedAt: new Date().toISOString(),
-          organization: formData.organization
-        }
-      }
-    }
-    
-    return {
-      title: `Request for Proposal - ${formData.projectName}`,
-      content: result.rfpText,
-      metadata: {
-        projectName: formData.projectName || 'Unnamed Project',
-        industry: formData.industry || 'General',
-        wordCount: result.rfpText.split(/\s+/).length,
-        generatedAt: new Date().toISOString(),
-        organization: formData.organization
-      }
-    }
   }
 
   const validateStep = (step: number) => {
@@ -256,22 +209,12 @@ export default function GeneratePage() {
       case 1:
         return formData.projectName && formData.industry && formData.projectType
       case 2:
-        return formData.projectDescription && formData.location
+        return formData.projectDescription && formData.projectDescription.length <= 500
       case 3:
-        // Allow step 3 even if disciplines aren't selected - show warning instead
-        return (formData.requirements?.length || 0) > 0
+        return formData.disciplines.length > 0 && formData.requirements.length > 0
       default:
         return true
     }
-  }
-
-  const canProceedToGenerate = () => {
-    // More comprehensive validation for final generation
-    return formData.projectName && 
-           formData.industry && 
-           formData.projectType && 
-           formData.projectDescription && 
-           ((formData.disciplines?.length || 0) > 0 || (formData.requirements?.length || 0) > 0)
   }
 
   return (
@@ -315,83 +258,36 @@ export default function GeneratePage() {
                 {/* Progress Indicator */}
                 <Card className="shadow-lg border-0">
                   <CardContent className="p-6">
-                    <div className="relative">
-                      {/* Steps Container */}
-                      <div className="flex items-start justify-between relative">
-                        {[1, 2, 3].map((step) => {
-                          const isCompleted = validateStep(step) && currentStep > step
-                          const isCurrent = currentStep === step
-                          const hasErrors = step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ||
-                                          step === 2 && (!formData.projectDescription || !formData.location) ||
-                                          step === 3 && !canProceedToGenerate()
-                          
-                          return (
-                            <div key={step} className="flex flex-col items-center flex-1">
-                              {/* Step Circle */}
-                              <button
-                                onClick={() => setCurrentStep(step)}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors mb-3 relative z-10 border-4 border-white shadow-lg ${
-                                  isCurrent
-                                    ? 'bg-blue-600 text-white' 
-                                    : isCompleted
-                                      ? 'bg-green-600 text-white' 
-                                      : hasErrors && step < currentStep
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                }`}
-                              >
-                                {isCompleted ? <CheckCircle className="h-5 w-5" /> : step}
-                              </button>
-                              
-                              {/* Step Label */}
-                              <button
-                                onClick={() => setCurrentStep(step)}
-                                className={`text-sm text-center transition-colors px-2 ${
-                                  isCurrent ? 'text-blue-600 font-semibold' : 
-                                  isCompleted ? 'text-green-600 font-semibold' : 'text-gray-600 hover:text-gray-800'
-                                }`}
-                              >
-                                {step === 1 && 'Project Basics'}
-                                {step === 2 && 'Details & Scope'}
-                                {step === 3 && 'Requirements'}
-                              </button>
-                              
-                              {/* Status Indicator */}
-                              <div className="mt-1 text-center">
-                                {step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : step === 2 && (!formData.projectDescription || !formData.location) ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : step === 3 && (formData.requirements?.length || 0) === 0 ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : isCompleted || (isCurrent && validateStep(step)) ? (
-                                  <span className="text-green-500 text-xs font-medium">✓ Complete</span>
-                                ) : (
-                                  <span className="text-gray-400 text-xs">○ Pending</span>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                        
-                        {/* Connecting Lines Behind Circles */}
-                        <div className="absolute top-5 left-0 right-0 flex items-center z-0">
-                          {/* Single continuous line from step 1 to step 3 */}
-                          <div className="flex items-center w-full px-5">
-                            {/* Line from step 1 to step 2 */}
-                            <div className="w-5" /> {/* Space for first circle */}
-                            <div className={`h-1 flex-1 transition-all duration-300 ${
-                              validateStep(1) && currentStep > 1 ? 'bg-green-600' : 'bg-gray-200'
-                            }`} />
-                            <div className="w-10" /> {/* Space for middle circle */}
-                            {/* Line from step 2 to step 3 */}
-                            <div className={`h-1 flex-1 transition-all duration-300 ${
-                              validateStep(2) && currentStep > 2 ? 'bg-green-600' : 'bg-gray-200'
-                            }`} />
-                            <div className="w-5" /> {/* Space for last circle */}
+                    <div className="flex items-center space-x-4">
+                      {[1, 2, 3].map((step) => (
+                        <div key={step} className="flex items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            currentStep === step 
+                              ? 'bg-blue-600 text-white' 
+                              : currentStep > step 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {currentStep > step ? <CheckCircle className="h-4 w-4" /> : step}
                           </div>
+                          {step < 3 && (
+                            <div className={`w-16 h-1 mx-2 ${
+                              currentStep > step ? 'bg-green-600' : 'bg-gray-200'
+                            }`} />
+                          )}
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-2 text-sm">
+                      <span className={currentStep >= 1 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Project Basics
+                      </span>
+                      <span className={currentStep >= 2 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Details & Scope
+                      </span>
+                      <span className={currentStep >= 3 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Requirements
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -527,10 +423,16 @@ export default function GeneratePage() {
                             rows={8}
                             value={formData.projectDescription}
                             onChange={(e) => setFormData(prev => ({ ...prev, projectDescription: e.target.value }))}
+                            maxLength={500}
                           />
-                          <p className="text-sm text-gray-500">
-                            Minimum 100 characters. Be specific about project goals and requirements.
-                          </p>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">
+                              Be specific about project goals and requirements.
+                            </span>
+                            <span className={formData.projectDescription.length > 450 ? 'text-orange-500' : 'text-gray-500'}>
+                              {formData.projectDescription.length}/500 characters
+                            </span>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -558,21 +460,6 @@ export default function GeneratePage() {
                         {/* Disciplines */}
                         <div className="space-y-3">
                           <Label>Disciplines/Expertise Required *</Label>
-                          {!formData.industry && (
-                            <Alert className="border-amber-200 bg-amber-50">
-                              <AlertTriangle className="h-4 w-4 text-amber-600" />
-                              <AlertDescription className="text-amber-800">
-                                <strong>Industry Required:</strong> Please go back to Step 1 and select an industry to view available disciplines.
-                                <Button
-                                  variant="link"
-                                  className="p-0 ml-2 h-auto text-amber-700 underline"
-                                  onClick={() => setCurrentStep(1)}
-                                >
-                                  Go to Step 1
-                                </Button>
-                              </AlertDescription>
-                            </Alert>
-                          )}
                           <Select
                             onValueChange={(value) => addToArray('disciplines', value)}
                             disabled={!availableDisciplines.length}
@@ -581,9 +468,7 @@ export default function GeneratePage() {
                               <SelectValue placeholder={
                                 availableDisciplines.length 
                                   ? "Add discipline..." 
-                                  : formData.industry 
-                                    ? "No disciplines available for this industry"
-                                    : "Select industry first"
+                                  : "Select industry first"
                               } />
                             </SelectTrigger>
                             <SelectContent>
@@ -595,7 +480,7 @@ export default function GeneratePage() {
                             </SelectContent>
                           </Select>
                           <div className="flex flex-wrap gap-2">
-                            {formData.disciplines?.map((discipline, index) => (
+                            {formData.disciplines.map((discipline, index) => (
                               <Badge key={index} variant="secondary" className="px-3 py-1">
                                 {discipline}
                                 <Button
@@ -609,11 +494,6 @@ export default function GeneratePage() {
                               </Badge>
                             ))}
                           </div>
-                          {formData.industry && availableDisciplines.length === 0 && (
-                            <p className="text-sm text-gray-500">
-                              No predefined disciplines available for {formData.industry}. You can add custom requirements below.
-                            </p>
-                          )}
                         </div>
 
                         <Separator />
@@ -645,7 +525,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.requirements?.map((requirement, index) => (
+                            {formData.requirements.map((requirement, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{requirement}</span>
                                 <Button
@@ -687,7 +567,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.technicalSpecifications?.map((spec, index) => (
+                            {formData.technicalSpecifications.map((spec, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{spec}</span>
                                 <Button
@@ -729,7 +609,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.expectedOutcomes?.map((outcome, index) => (
+                            {formData.expectedOutcomes.map((outcome, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{outcome}</span>
                                 <Button
@@ -766,25 +646,14 @@ export default function GeneratePage() {
                         Next
                       </Button>
                     ) : (
-                      <div className="flex flex-col items-end space-y-2">
-                        {!canProceedToGenerate() && (
-                          <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded border">
-                            {!formData.projectName && "• Project name required"}
-                            {!formData.industry && "• Industry selection required"}
-                            {!formData.projectType && "• Project type required"}
-                            {!formData.projectDescription && "• Project description required"}
-                            {(formData.disciplines?.length || 0) === 0 && (formData.requirements?.length || 0) === 0 && "• At least one discipline or requirement needed"}
-                          </div>
-                        )}
-                        <Button
-                          onClick={handleGenerate}
-                          disabled={!canProceedToGenerate() || isGenerating}
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 w-full"
-                        >
-                          <Wand2 className="h-4 w-4 mr-2" />
-                          Generate Government RFP
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={handleGenerate}
+                        disabled={!validateStep(currentStep) || isGenerating}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      >
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Generate RFP
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -891,14 +760,6 @@ export default function GeneratePage() {
                         <span>RFP Document Generated</span>
                       </CardTitle>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={showDocumentPreview}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Preview
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1013,32 +874,6 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
-
-      {/* Document Preview Modal - Only show when there's generated content */}
-      {result && (
-        <DocumentPreview
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          rfpData={getDocumentData()!}
-          formData={formData}
-        />
-      )}
-
-      {/* Success Notification */}
-      {result && (
-        <SuccessNotification
-          isVisible={showSuccessNotification}
-          onClose={() => setShowSuccessNotification(false)}
-          onPreview={showDocumentPreview}
-          onDownload={downloadRFP}
-          onCopy={() => copyToClipboard(result.rfpText)}
-          metadata={{
-            projectName: formData.projectName || 'Unnamed Project',
-            wordCount: result.rfpText.split(/\s+/).length,
-            industry: formData.industry || 'General'
-          }}
-        />
-      )}
     </div>
   )
 }
