@@ -297,79 +297,83 @@ export default function GeneratePage() {
                 {/* Progress Indicator */}
                 <Card className="shadow-lg border-0">
                   <CardContent className="p-6">
-                    <div className="flex items-center space-x-4">
-                      {[1, 2, 3].map((step) => {
-                        const isCompleted = validateStep(step) && currentStep > step
-                        const isCurrent = currentStep === step
-                        const hasErrors = step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ||
-                                        step === 2 && (!formData.projectDescription || !formData.location) ||
-                                        step === 3 && !canProceedToGenerate()
+                    <div className="relative">
+                      {/* Steps Container */}
+                      <div className="flex items-start justify-between relative">
+                        {[1, 2, 3].map((step) => {
+                          const isCompleted = validateStep(step) && currentStep > step
+                          const isCurrent = currentStep === step
+                          const hasErrors = step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ||
+                                          step === 2 && (!formData.projectDescription || !formData.location) ||
+                                          step === 3 && !canProceedToGenerate()
+                          
+                          return (
+                            <div key={step} className="flex flex-col items-center flex-1">
+                              {/* Step Circle */}
+                              <button
+                                onClick={() => setCurrentStep(step)}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors mb-3 relative z-10 border-4 border-white shadow-lg ${
+                                  isCurrent
+                                    ? 'bg-blue-600 text-white' 
+                                    : isCompleted
+                                      ? 'bg-green-600 text-white' 
+                                      : hasErrors && step < currentStep
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                }`}
+                              >
+                                {isCompleted ? <CheckCircle className="h-5 w-5" /> : step}
+                              </button>
+                              
+                              {/* Step Label */}
+                              <button
+                                onClick={() => setCurrentStep(step)}
+                                className={`text-sm text-center transition-colors px-2 ${
+                                  isCurrent ? 'text-blue-600 font-semibold' : 
+                                  isCompleted ? 'text-green-600 font-semibold' : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                              >
+                                {step === 1 && 'Project Basics'}
+                                {step === 2 && 'Details & Scope'}
+                                {step === 3 && 'Requirements'}
+                              </button>
+                              
+                              {/* Status Indicator */}
+                              <div className="mt-1 text-center">
+                                {step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ? (
+                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
+                                ) : step === 2 && (!formData.projectDescription || !formData.location) ? (
+                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
+                                ) : step === 3 && (formData.requirements?.length || 0) === 0 ? (
+                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
+                                ) : isCompleted || (isCurrent && validateStep(step)) ? (
+                                  <span className="text-green-500 text-xs font-medium">✓ Complete</span>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">○ Pending</span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                         
-                        return (
-                          <div key={step} className="flex items-center">
-                            <button
-                              onClick={() => setCurrentStep(step)}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                                isCurrent
-                                  ? 'bg-blue-600 text-white' 
-                                  : isCompleted
-                                    ? 'bg-green-600 text-white' 
-                                    : hasErrors && step < currentStep
-                                      ? 'bg-amber-500 text-white'
-                                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                              }`}
-                            >
-                              {isCompleted ? <CheckCircle className="h-4 w-4" /> : step}
-                            </button>
-                            {step < 3 && (
-                              <div className={`w-16 h-1 mx-2 ${
-                                isCompleted ? 'bg-green-600' : 'bg-gray-200'
-                              }`} />
-                            )}
+                        {/* Connecting Lines Behind Circles */}
+                        <div className="absolute top-5 left-0 right-0 flex items-center z-0">
+                          {/* Single continuous line from step 1 to step 3 */}
+                          <div className="flex items-center w-full px-5">
+                            {/* Line from step 1 to step 2 */}
+                            <div className="w-5" /> {/* Space for first circle */}
+                            <div className={`h-1 flex-1 transition-all duration-300 ${
+                              validateStep(1) && currentStep > 1 ? 'bg-green-600' : 'bg-gray-200'
+                            }`} />
+                            <div className="w-10" /> {/* Space for middle circle */}
+                            {/* Line from step 2 to step 3 */}
+                            <div className={`h-1 flex-1 transition-all duration-300 ${
+                              validateStep(2) && currentStep > 2 ? 'bg-green-600' : 'bg-gray-200'
+                            }`} />
+                            <div className="w-5" /> {/* Space for last circle */}
                           </div>
-                        )
-                      })}
-                    </div>
-                    <div className="flex justify-between mt-2 text-sm">
-                      <button
-                        onClick={() => setCurrentStep(1)}
-                        className={`transition-colors ${
-                          currentStep >= 1 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
-                        }`}
-                      >
-                        Project Basics
-                        {!formData.projectName || !formData.industry || !formData.projectType ? (
-                          <span className="text-amber-500 ml-1">*</span>
-                        ) : (
-                          <span className="text-green-500 ml-1">✓</span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => setCurrentStep(2)}
-                        className={`transition-colors ${
-                          currentStep >= 2 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
-                        }`}
-                      >
-                        Details & Scope
-                        {!formData.projectDescription || !formData.location ? (
-                          <span className="text-amber-500 ml-1">*</span>
-                        ) : (
-                          <span className="text-green-500 ml-1">✓</span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => setCurrentStep(3)}
-                        className={`transition-colors ${
-                          currentStep >= 3 ? 'text-blue-600 font-semibold hover:text-blue-700' : 'text-gray-500'
-                        }`}
-                      >
-                        Requirements
-                        {(formData.requirements?.length || 0) === 0 ? (
-                          <span className="text-amber-500 ml-1">*</span>
-                        ) : (
-                          <span className="text-green-500 ml-1">✓</span>
-                        )}
-                      </button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
