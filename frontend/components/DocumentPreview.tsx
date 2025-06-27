@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Download, Printer, Copy, FileText, Globe, Check } from 'lucide-react'
+import { X, Download, Printer, Copy, FileText, Globe, Check, Edit } from 'lucide-react'
 import DocumentGenerator from '@/lib/documentGenerator'
+import DocumentEditor from './DocumentEditor'
 
 interface DocumentPreviewProps {
   isOpen: boolean
@@ -18,11 +19,14 @@ interface DocumentPreviewProps {
       organization?: string
     }
   }
+  formData?: any // Add formData for AI generation in editor
 }
 
-const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpData }) => {
+const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpData, formData }) => {
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'preview' | 'formatted'>('preview')
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [currentContent, setCurrentContent] = useState(rfpData.content)
 
   if (!isOpen) return null
 
@@ -39,12 +43,31 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpD
   }
 
   const handleCopy = () => {
-    DocumentGenerator.copyToClipboard(rfpData.content)
+    DocumentGenerator.copyToClipboard(currentContent)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const formattedHTML = DocumentGenerator.generateHTML(rfpData)
+  const handleEdit = () => {
+    setIsEditMode(true)
+  }
+
+  const handleSaveEdit = (newContent: string) => {
+    setCurrentContent(newContent)
+    // Update the rfpData object as well
+    rfpData.content = newContent
+    rfpData.metadata.wordCount = newContent.split(/\s+/).length
+    setIsEditMode(false)
+  }
+
+  const handleCloseEdit = () => {
+    setIsEditMode(false)
+  }
+
+  const formattedHTML = DocumentGenerator.generateHTML({
+    ...rfpData,
+    content: currentContent
+  })
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -87,6 +110,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpD
             <FileText className="w-4 h-4 inline mr-2" />
             Raw Content
           </button>
+          <button
+            onClick={handleEdit}
+            className="ml-auto px-6 py-3 font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-colors rounded-t-lg"
+          >
+            <Edit className="w-4 h-4 inline mr-2" />
+            Edit Document
+          </button>
         </div>
 
         {/* Document Info */}
@@ -98,7 +128,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpD
             </div>
             <div>
               <span className="font-medium text-gray-700">Word Count:</span>
-              <span className="ml-2 text-gray-900">{rfpData.metadata.wordCount.toLocaleString()}</span>
+              <span className="ml-2 text-gray-900">{currentContent.split(/\s+/).length.toLocaleString()}</span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Generated:</span>
@@ -128,7 +158,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpD
           ) : (
             <div className="h-full overflow-auto p-6">
               <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-                {rfpData.content}
+                {currentContent}
               </pre>
             </div>
           )}
@@ -180,6 +210,16 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, rfpD
           </div>
         </div>
       </div>
+
+      {/* Document Editor Modal */}
+      <DocumentEditor
+        isOpen={isEditMode}
+        onClose={handleCloseEdit}
+        initialContent={currentContent}
+        title={rfpData.title}
+        onSave={handleSaveEdit}
+        formData={formData}
+      />
     </div>
   )
 }
