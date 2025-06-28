@@ -95,7 +95,40 @@ export default function GeneratePage() {
     requirements: [],
     technicalSpecifications: [],
     compliance: [],
-    expectedOutcomes: []
+    expectedOutcomes: [],
+    // New structured fields
+    introduction: '',
+    generalTermsConditions: '',
+    contactInfo: {
+      primaryContact: '',
+      email: '',
+      phone: '',
+      address: ''
+    },
+    rfpTimeline: {
+      issueDate: '',
+      clarificationDeadline: '',
+      submissionDeadline: '',
+      validityPeriod: ''
+    },
+    scopeOfWork: {
+      functionalRequirements: [],
+      nonFunctionalRequirements: {
+        userExperience: [],
+        performance: [],
+        devops: [],
+        security: []
+      },
+      activitiesInScope: []
+    },
+    budgetBreakdown: {
+      totalBudget: '',
+      categories: []
+    },
+    complianceTerms: [],
+    responseFormat: '',
+    expectations: '',
+    presentationRequirements: []
   })
 
   // Generation state
@@ -119,23 +152,72 @@ export default function GeneratePage() {
   }, [formData.industry])
 
   // Array field handlers
-  const addToArray = (field: keyof RFPGenerationRequest, value: string) => {
+  const addToArray = (field: string, value: string) => {
     if (!value.trim()) return
-    const currentArray = formData[field] as string[] || []
-    if (!currentArray.includes(value.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        [field]: [...currentArray, value.trim()]
-      }))
+    
+    // Handle nested fields
+    if (field.includes('.')) {
+      const parts = field.split('.')
+      setFormData(prev => {
+        let newData = { ...prev }
+        let current: any = newData
+        
+        // Navigate to the nested object
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {}
+          }
+          current = current[parts[i]]
+        }
+        
+        const lastKey = parts[parts.length - 1]
+        const currentArray = current[lastKey] || []
+        
+        if (!currentArray.includes(value.trim())) {
+          current[lastKey] = [...currentArray, value.trim()]
+        }
+        
+        return newData
+      })
+    } else {
+      // Handle direct fields
+      const currentArray = (formData as any)[field] as string[] || []
+      if (!currentArray.includes(value.trim())) {
+        setFormData(prev => ({
+          ...prev,
+          [field]: [...currentArray, value.trim()]
+        }))
+      }
     }
   }
 
-  const removeFromArray = (field: keyof RFPGenerationRequest, index: number) => {
-    const currentArray = formData[field] as string[] || []
-    setFormData(prev => ({
-      ...prev,
-      [field]: currentArray.filter((_, i) => i !== index)
-    }))
+  const removeFromArray = (field: string, index: number) => {
+    // Handle nested fields
+    if (field.includes('.')) {
+      const parts = field.split('.')
+      setFormData(prev => {
+        let newData = { ...prev }
+        let current: any = newData
+        
+        // Navigate to the nested object
+        for (let i = 0; i < parts.length - 1; i++) {
+          current = current[parts[i]]
+        }
+        
+        const lastKey = parts[parts.length - 1]
+        const currentArray = current[lastKey] || []
+        current[lastKey] = currentArray.filter((_: any, i: number) => i !== index)
+        
+        return newData
+      })
+    } else {
+      // Handle direct fields
+      const currentArray = (formData as any)[field] as string[] || []
+      setFormData(prev => ({
+        ...prev,
+        [field]: currentArray.filter((_, i) => i !== index)
+      }))
+    }
   }
 
   // Generation simulation
@@ -209,9 +291,20 @@ export default function GeneratePage() {
       case 1:
         return formData.projectName && formData.industry && formData.projectType
       case 2:
-        return formData.projectDescription && formData.projectDescription.length <= 500
+        return formData.projectDescription && formData.projectDescription.length <= 500 && 
+               formData.introduction && formData.generalTermsConditions
       case 3:
-        return formData.disciplines.length > 0 && formData.requirements.length > 0
+        return formData.contactInfo?.primaryContact && formData.contactInfo?.email && 
+               formData.rfpTimeline?.issueDate && formData.rfpTimeline?.submissionDeadline
+      case 4:
+        return formData.scopeOfWork?.functionalRequirements && formData.scopeOfWork.functionalRequirements.length > 0 && 
+               formData.scopeOfWork?.activitiesInScope && formData.scopeOfWork.activitiesInScope.length > 0
+      case 5:
+        return formData.disciplines && formData.disciplines.length > 0 && 
+               formData.requirements && formData.requirements.length > 0
+      case 6:
+        return formData.budgetBreakdown?.totalBudget && 
+               formData.complianceTerms && formData.complianceTerms.length > 0
       default:
         return true
     }
@@ -258,35 +351,51 @@ export default function GeneratePage() {
                 {/* Progress Indicator */}
                 <Card className="shadow-lg border-0">
                   <CardContent className="p-6">
-                    <div className="flex items-center space-x-4">
-                      {[1, 2, 3].map((step) => (
-                        <div key={step} className="flex items-center">
+                    <div className="flex items-center space-x-2 overflow-x-auto">
+                      {[
+                        { num: 1, label: 'Project Basics' },
+                        { num: 2, label: 'Description & Terms' },
+                        { num: 3, label: 'Timeline & Contact' },
+                        { num: 4, label: 'Scope of Work' },
+                        { num: 5, label: 'Requirements' },
+                        { num: 6, label: 'Budget & Compliance' }
+                      ].map((step, index) => (
+                        <div key={step.num} className="flex items-center flex-shrink-0">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            currentStep === step 
+                            currentStep === step.num 
                               ? 'bg-blue-600 text-white' 
-                              : currentStep > step 
+                              : currentStep > step.num 
                                 ? 'bg-green-600 text-white' 
                                 : 'bg-gray-200 text-gray-600'
                           }`}>
-                            {currentStep > step ? <CheckCircle className="h-4 w-4" /> : step}
+                            {currentStep > step.num ? <CheckCircle className="h-4 w-4" /> : step.num}
                           </div>
-                          {step < 3 && (
-                            <div className={`w-16 h-1 mx-2 ${
-                              currentStep > step ? 'bg-green-600' : 'bg-gray-200'
+                          {index < 5 && (
+                            <div className={`w-8 h-1 mx-1 ${
+                              currentStep > step.num ? 'bg-green-600' : 'bg-gray-200'
                             }`} />
                           )}
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between mt-2 text-sm">
+                    <div className="grid grid-cols-6 gap-1 mt-2 text-xs">
                       <span className={currentStep >= 1 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
                         Project Basics
                       </span>
                       <span className={currentStep >= 2 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
-                        Details & Scope
+                        Description & Terms
                       </span>
                       <span className={currentStep >= 3 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Timeline & Contact
+                      </span>
+                      <span className={currentStep >= 4 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Scope of Work
+                      </span>
+                      <span className={currentStep >= 5 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
                         Requirements
+                      </span>
+                      <span className={currentStep >= 6 ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        Budget & Compliance
                       </span>
                     </div>
                   </CardContent>
@@ -397,7 +506,7 @@ export default function GeneratePage() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Project Description */}
+                {/* Step 2: Project Description & Terms */}
                 {currentStep === 2 && (
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -408,10 +517,10 @@ export default function GeneratePage() {
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
                           <BookOpen className="h-5 w-5 text-blue-600" />
-                          <span>Project Details & Scope</span>
+                          <span>Project Description & General Terms</span>
                         </CardTitle>
                         <CardDescription>
-                          Provide detailed description and scope of your project
+                          Provide detailed description, introduction, and general terms
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -420,7 +529,7 @@ export default function GeneratePage() {
                           <Textarea
                             id="projectDescription"
                             placeholder="Provide a comprehensive description of your project, including objectives, expected outcomes, and key deliverables..."
-                            rows={8}
+                            rows={6}
                             value={formData.projectDescription}
                             onChange={(e) => setFormData(prev => ({ ...prev, projectDescription: e.target.value }))}
                             maxLength={500}
@@ -434,12 +543,53 @@ export default function GeneratePage() {
                             </span>
                           </div>
                         </div>
+
+                        <Separator />
+
+                        <div className="space-y-2">
+                          <Label htmlFor="introduction">RFP Introduction *</Label>
+                          <Textarea
+                            id="introduction"
+                            placeholder="Write a formal introduction for the RFP document, including background context and purpose..."
+                            rows={4}
+                            value={formData.introduction}
+                            onChange={(e) => setFormData(prev => ({ ...prev, introduction: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            This will appear as the opening section of your RFP document.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="generalTermsConditions">General Terms & Conditions *</Label>
+                          <Textarea
+                            id="generalTermsConditions"
+                            placeholder="Specify general terms and conditions that apply to this RFP..."
+                            rows={4}
+                            value={formData.generalTermsConditions}
+                            onChange={(e) => setFormData(prev => ({ ...prev, generalTermsConditions: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            Include standard clauses, legal requirements, and general conditions.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="responseFormat">Response Format & Instructions</Label>
+                          <Textarea
+                            id="responseFormat"
+                            placeholder="Specify how respondents should format their proposals, required sections, file formats, etc..."
+                            rows={3}
+                            value={formData.responseFormat}
+                            onChange={(e) => setFormData(prev => ({ ...prev, responseFormat: e.target.value }))}
+                          />
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
                 )}
 
-                {/* Step 3: Requirements & Specifications */}
+                {/* Step 3: Timeline & Contact Information */}
                 {currentStep === 3 && (
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -449,8 +599,379 @@ export default function GeneratePage() {
                     <Card className="shadow-lg border-0">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
+                          <Clock className="h-5 w-5 text-blue-600" />
+                          <span>Timeline & Contact Information</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Set RFP timeline and provide contact details for inquiries
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Contact Information */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Contact Information *</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="primaryContact">Primary Contact *</Label>
+                              <Input
+                                id="primaryContact"
+                                placeholder="Name of the contact person"                              value={formData.contactInfo?.primaryContact || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                contactInfo: { ...prev.contactInfo!, primaryContact: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactEmail">Email *</Label>
+                              <Input
+                                id="contactEmail"
+                                type="email"
+                                placeholder="contact@organization.gov.in"                              value={formData.contactInfo?.email || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                contactInfo: { ...prev.contactInfo!, email: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactPhone">Phone Number</Label>
+                              <Input
+                                id="contactPhone"
+                                placeholder="+91-XXXXXXXXXX"                              value={formData.contactInfo?.phone || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                contactInfo: { ...prev.contactInfo!, phone: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactAddress">Address</Label>
+                              <Input
+                                id="contactAddress"
+                                placeholder="Official address"                              value={formData.contactInfo?.address || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                contactInfo: { ...prev.contactInfo!, address: e.target.value }
+                              }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* RFP Timeline */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">RFP Timeline *</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="issueDate">RFP Issue Date *</Label>
+                              <Input
+                                id="issueDate"
+                                type="date"                              value={formData.rfpTimeline?.issueDate || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                rfpTimeline: { ...prev.rfpTimeline!, issueDate: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="clarificationDeadline">Clarification Deadline</Label>
+                              <Input
+                                id="clarificationDeadline"
+                                type="date"                              value={formData.rfpTimeline?.clarificationDeadline || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                rfpTimeline: { ...prev.rfpTimeline!, clarificationDeadline: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="submissionDeadline">Final Submission Deadline *</Label>
+                              <Input
+                                id="submissionDeadline"
+                                type="date"                              value={formData.rfpTimeline?.submissionDeadline || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                rfpTimeline: { ...prev.rfpTimeline!, submissionDeadline: e.target.value }
+                              }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="validityPeriod">RFP Validity Period</Label>
+                              <Input
+                                id="validityPeriod"
+                                placeholder="e.g., 90 days"                              value={formData.rfpTimeline?.validityPeriod || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                rfpTimeline: { ...prev.rfpTimeline!, validityPeriod: e.target.value }
+                              }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 4: Scope of Work */}
+                {currentStep === 4 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
                           <Target className="h-5 w-5 text-blue-600" />
-                          <span>Requirements & Specifications</span>
+                          <span>Scope of Work</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Define functional requirements, non-functional requirements, and activities
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Functional Requirements */}
+                        <div className="space-y-3">
+                          <Label>Functional Requirements *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter a functional requirement..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('scopeOfWork.functionalRequirements', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('scopeOfWork.functionalRequirements', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(formData.scopeOfWork?.functionalRequirements || []).map((req, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{req}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('scopeOfWork.functionalRequirements', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Non-Functional Requirements */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Non-Functional Requirements</h3>
+                          
+                          {/* User Experience */}
+                          <div className="space-y-3">
+                            <Label>User Experience Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter UX requirement..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.userExperience', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.userExperience', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.userExperience || []).map((req, index) => (
+                                <Badge key={index} variant="secondary" className="px-3 py-1">
+                                  {req}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.userExperience', index)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Performance */}
+                          <div className="space-y-3">
+                            <Label>Performance Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter performance requirement..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.performance', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.performance', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.performance || []).map((req, index) => (
+                                <Badge key={index} variant="secondary" className="px-3 py-1">
+                                  {req}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.performance', index)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Security */}
+                          <div className="space-y-3">
+                            <Label>Security Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter security requirement..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.security', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.security', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.security || []).map((req, index) => (
+                                <Badge key={index} variant="secondary" className="px-3 py-1">
+                                  {req}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.security', index)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Activities in Scope */}
+                        <div className="space-y-3">
+                          <Label>Activities in Scope *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter activity to be performed..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('scopeOfWork.activitiesInScope', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('scopeOfWork.activitiesInScope', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(formData.scopeOfWork?.activitiesInScope || []).map((activity, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{activity}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('scopeOfWork.activitiesInScope', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 5: Requirements & Specifications */}
+                {currentStep === 5 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Settings className="h-5 w-5 text-blue-600" />
+                          <span>Technical Requirements & Disciplines</span>
                         </CardTitle>
                         <CardDescription>
                           Define technical requirements, disciplines, and expected outcomes
@@ -480,7 +1001,7 @@ export default function GeneratePage() {
                             </SelectContent>
                           </Select>
                           <div className="flex flex-wrap gap-2">
-                            {formData.disciplines.map((discipline, index) => (
+                            {(formData.disciplines || []).map((discipline, index) => (
                               <Badge key={index} variant="secondary" className="px-3 py-1">
                                 {discipline}
                                 <Button
@@ -498,7 +1019,7 @@ export default function GeneratePage() {
 
                         <Separator />
 
-                        {/* Requirements */}
+                        {/* Key Requirements */}
                         <div className="space-y-3">
                           <Label>Key Requirements *</Label>
                           <div className="flex space-x-2">
@@ -525,7 +1046,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.requirements.map((requirement, index) => (
+                            {(formData.requirements || []).map((requirement, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{requirement}</span>
                                 <Button
@@ -567,7 +1088,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.technicalSpecifications.map((spec, index) => (
+                            {(formData.technicalSpecifications || []).map((spec, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{spec}</span>
                                 <Button
@@ -609,7 +1130,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.expectedOutcomes.map((outcome, index) => (
+                            {(formData.expectedOutcomes || []).map((outcome, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{outcome}</span>
                                 <Button
@@ -622,6 +1143,191 @@ export default function GeneratePage() {
                               </div>
                             ))}
                           </div>
+                        </div>
+
+                        {/* Presentation Requirements */}
+                        <div className="space-y-3">
+                          <Label>Presentation & Documentation Requirements</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter presentation requirement (e.g., Technical presentation required, Demo session, etc.)..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('presentationRequirements', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('presentationRequirements', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(formData.presentationRequirements || []).map((req, index) => (
+                              <Badge key={index} variant="outline" className="px-3 py-1">
+                                {req}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
+                                  onClick={() => removeFromArray('presentationRequirements', index)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 6: Budget & Compliance */}
+                {currentStep === 6 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <IndianRupee className="h-5 w-5 text-blue-600" />
+                          <span>Budget Breakdown & Compliance</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Define budget structure, compliance terms, and final expectations
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Budget Breakdown */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Budget Breakdown</h3>
+                          <div className="space-y-2">
+                            <Label htmlFor="totalBudget">Total Budget *</Label>
+                            <div className="relative">
+                              <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="totalBudget"
+                                placeholder="e.g., ₹85 Crores"
+                                className="pl-10"                              value={formData.budgetBreakdown?.totalBudget || ''}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                budgetBreakdown: { ...prev.budgetBreakdown!, totalBudget: e.target.value }
+                              }))}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <Label>Budget Categories (Optional)</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter budget category (e.g., Hardware: ₹50 Lakhs)..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('budgetBreakdown.categories', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('budgetBreakdown.categories', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.budgetBreakdown?.categories || []).map((category, index) => (
+                                <div key={index} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                                  <span className="text-sm font-medium text-blue-900">{category}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFromArray('budgetBreakdown.categories', index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Compliance Terms */}
+                        <div className="space-y-3">
+                          <Label>Compliance Terms & Rules *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter compliance requirement (e.g., GFR 2017 compliance, CVC guidelines, etc.)..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('complianceTerms', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('complianceTerms', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(formData.complianceTerms || []).map((term, index) => (
+                              <div key={index} className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                <span className="text-sm font-medium text-green-900">{term}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('complianceTerms', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expectations */}
+                        <div className="space-y-2">
+                          <Label htmlFor="expectations">Vendor Expectations & Evaluation Criteria</Label>
+                          <Textarea
+                            id="expectations"
+                            placeholder="Describe what you expect from vendors, evaluation criteria, selection process, etc..."
+                            rows={4}
+                            value={formData.expectations}
+                            onChange={(e) => setFormData(prev => ({ ...prev, expectations: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            This will help vendors understand how they will be evaluated and what is expected.
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -638,10 +1344,11 @@ export default function GeneratePage() {
                     Previous
                   </Button>
                   <div className="flex space-x-2">
-                    {currentStep < 3 ? (
+                    {currentStep < 6 ? (
                       <Button
                         onClick={() => setCurrentStep(currentStep + 1)}
                         disabled={!validateStep(currentStep)}
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         Next
                       </Button>
@@ -652,7 +1359,7 @@ export default function GeneratePage() {
                         className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                       >
                         <Wand2 className="h-4 w-4 mr-2" />
-                        Generate RFP
+                        Generate Comprehensive RFP
                       </Button>
                     )}
                   </div>
@@ -826,20 +1533,24 @@ export default function GeneratePage() {
           <div className="space-y-6">
             <Card className="shadow-lg border-0 sticky top-24">
               <CardHeader>
-                <CardTitle className="text-lg">RFP Features</CardTitle>
+                <CardTitle className="text-lg">Enhanced RFP Features</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
+                    "Human-Controlled Inputs",
+                    "Structured Data Collection",
                     "GFR 2017 Compliance",
                     "CVC Guidelines Integration",
                     "Make in India Requirements",
-                    "Bilingual Headers (Hindi/English)",
-                    "Technical Specifications",
+                    "Contact & Timeline Management",
+                    "Functional Requirements",
+                    "Non-Functional Requirements",
+                    "Budget Breakdown",
+                    "Compliance Terms",
+                    "Presentation Requirements",
+                    "Response Format Guidelines",
                     "Evaluation Criteria",
-                    "Legal & Contract Terms",
-                    "Procurement Schedule",
-                    "4000+ Professional Words",
                     "Government Formatting"
                   ].map((feature) => (
                     <div key={feature} className="flex items-center space-x-2">
@@ -853,21 +1564,16 @@ export default function GeneratePage() {
 
             <Card className="shadow-lg border-0">
               <CardHeader>
-                <CardTitle className="text-lg">Document Sections</CardTitle>
+                <CardTitle className="text-lg">RFP Structure Overview</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  <div className="font-semibold text-gray-700">✓ Executive Summary</div>
-                  <div className="font-semibold text-gray-700">✓ Project Background</div>
-                  <div className="font-semibold text-gray-700">✓ Scope of Work</div>
-                  <div className="font-semibold text-gray-700">✓ Technical Requirements</div>
-                  <div className="font-semibold text-gray-700">✓ Contractor Qualifications</div>
-                  <div className="font-semibold text-gray-700">✓ Evaluation Criteria</div>
-                  <div className="font-semibold text-gray-700">✓ Submission Requirements</div>
-                  <div className="font-semibold text-gray-700">✓ Contract Terms</div>
-                  <div className="font-semibold text-gray-700">✓ Compliance & Transparency</div>
-                  <div className="font-semibold text-gray-700">✓ Procurement Schedule</div>
-                  <div className="font-semibold text-gray-700">✓ Appendices & References</div>
+                  <div className="font-semibold text-gray-700">📋 Step 1: Project Basics</div>
+                  <div className="font-semibold text-gray-700">📝 Step 2: Description & Terms</div>
+                  <div className="font-semibold text-gray-700">📅 Step 3: Timeline & Contact</div>
+                  <div className="font-semibold text-gray-700">🎯 Step 4: Scope of Work</div>
+                  <div className="font-semibold text-gray-700">⚙️ Step 5: Requirements</div>
+                  <div className="font-semibold text-gray-700">💰 Step 6: Budget & Compliance</div>
                 </div>
               </CardContent>
             </Card>
