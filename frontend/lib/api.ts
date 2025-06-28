@@ -13,6 +13,39 @@ export interface RFPGenerationRequest {
   technicalSpecifications?: string[]
   compliance?: string[]
   expectedOutcomes?: string[]
+  // New structured fields
+  introduction?: string
+  generalTermsConditions?: string
+  contactInfo?: {
+    primaryContact: string
+    email: string
+    phone: string
+    address: string
+  }
+  rfpTimeline?: {
+    issueDate: string
+    clarificationDeadline: string
+    submissionDeadline: string
+    validityPeriod: string
+  }
+  scopeOfWork?: {
+    functionalRequirements: string[]
+    nonFunctionalRequirements: {
+      userExperience: string[]
+      performance: string[]
+      devops: string[]
+      security: string[]
+    }
+    activitiesInScope: string[]
+  }
+  budgetBreakdown?: {
+    totalBudget: string
+    categories: string[]
+  }
+  complianceTerms?: string[]
+  responseFormat?: string
+  expectations?: string
+  presentationRequirements?: string[]
 }
 
 export interface RFPGenerationResponse {

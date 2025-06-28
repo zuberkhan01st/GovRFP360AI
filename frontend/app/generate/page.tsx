@@ -28,7 +28,10 @@ import {
   X,
   BookOpen,
   Target,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Loader
 } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -98,7 +101,40 @@ export default function GeneratePage() {
     requirements: [],
     technicalSpecifications: [],
     compliance: [],
-    expectedOutcomes: []
+    expectedOutcomes: [],
+    // New structured fields
+    introduction: '',
+    generalTermsConditions: '',
+    contactInfo: {
+      primaryContact: '',
+      email: '',
+      phone: '',
+      address: ''
+    },
+    rfpTimeline: {
+      issueDate: '',
+      clarificationDeadline: '',
+      submissionDeadline: '',
+      validityPeriod: ''
+    },
+    scopeOfWork: {
+      functionalRequirements: [],
+      nonFunctionalRequirements: {
+        userExperience: [],
+        performance: [],
+        devops: [],
+        security: []
+      },
+      activitiesInScope: []
+    },
+    budgetBreakdown: {
+      totalBudget: '',
+      categories: []
+    },
+    complianceTerms: [],
+    responseFormat: '',
+    expectations: '',
+    presentationRequirements: []
   })
 
   // Generation state
@@ -126,23 +162,72 @@ export default function GeneratePage() {
   }, [formData.industry])
 
   // Array field handlers
-  const addToArray = (field: keyof RFPGenerationRequest, value: string) => {
+  const addToArray = (field: string, value: string) => {
     if (!value.trim()) return
-    const currentArray = formData[field] as string[] || []
-    if (!currentArray.includes(value.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        [field]: [...currentArray, value.trim()]
-      }))
+    
+    // Handle nested fields
+    if (field.includes('.')) {
+      const parts = field.split('.')
+      setFormData(prev => {
+        let newData = { ...prev }
+        let current: any = newData
+        
+        // Navigate to the nested object
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {}
+          }
+          current = current[parts[i]]
+        }
+        
+        const lastKey = parts[parts.length - 1]
+        const currentArray = current[lastKey] || []
+        
+        if (!currentArray.includes(value.trim())) {
+          current[lastKey] = [...currentArray, value.trim()]
+        }
+        
+        return newData
+      })
+    } else {
+      // Handle direct fields
+      const currentArray = (formData as any)[field] as string[] || []
+      if (!currentArray.includes(value.trim())) {
+        setFormData(prev => ({
+          ...prev,
+          [field]: [...currentArray, value.trim()]
+        }))
+      }
     }
   }
 
-  const removeFromArray = (field: keyof RFPGenerationRequest, index: number) => {
-    const currentArray = formData[field] as string[] || []
-    setFormData(prev => ({
-      ...prev,
-      [field]: currentArray.filter((_, i) => i !== index)
-    }))
+  const removeFromArray = (field: string, index: number) => {
+    // Handle nested fields
+    if (field.includes('.')) {
+      const parts = field.split('.')
+      setFormData(prev => {
+        let newData = { ...prev }
+        let current: any = newData
+        
+        // Navigate to the nested object
+        for (let i = 0; i < parts.length - 1; i++) {
+          current = current[parts[i]]
+        }
+        
+        const lastKey = parts[parts.length - 1]
+        const currentArray = current[lastKey] || []
+        current[lastKey] = currentArray.filter((_: any, i: number) => i !== index)
+        
+        return newData
+      })
+    } else {
+      // Handle direct fields
+      const currentArray = (formData as any)[field] as string[] || []
+      setFormData(prev => ({
+        ...prev,
+        [field]: currentArray.filter((_, i) => i !== index)
+      }))
+    }
   }
 
   // Generation simulation
@@ -232,8 +317,7 @@ export default function GeneratePage() {
           projectName: formData.projectName || 'Unnamed Project',
           industry: formData.industry || 'General',
           wordCount: sampleContent.split(/\s+/).length,
-          generatedAt: new Date().toISOString(),
-          organization: formData.organization
+          generatedAt: new Date().toISOString()
         }
       }
     }
@@ -245,8 +329,7 @@ export default function GeneratePage() {
         projectName: formData.projectName || 'Unnamed Project',
         industry: formData.industry || 'General',
         wordCount: result.rfpText.split(/\s+/).length,
-        generatedAt: new Date().toISOString(),
-        organization: formData.organization
+        generatedAt: new Date().toISOString()
       }
     }
   }
@@ -256,22 +339,56 @@ export default function GeneratePage() {
       case 1:
         return formData.projectName && formData.industry && formData.projectType
       case 2:
-        return formData.projectDescription && formData.location
+        return formData.projectDescription && formData.projectDescription.length <= 500 && 
+               formData.introduction && formData.generalTermsConditions
       case 3:
-        // Allow step 3 even if disciplines aren't selected - show warning instead
-        return (formData.requirements?.length || 0) > 0
+        return formData.contactInfo?.primaryContact && formData.contactInfo?.email && 
+               formData.rfpTimeline?.issueDate && formData.rfpTimeline?.submissionDeadline
+      case 4:
+        const hasNonFunctionalReqs = formData.scopeOfWork?.nonFunctionalRequirements && (
+          (formData.scopeOfWork.nonFunctionalRequirements.userExperience?.length || 0) > 0 ||
+          (formData.scopeOfWork.nonFunctionalRequirements.performance?.length || 0) > 0 ||
+          (formData.scopeOfWork.nonFunctionalRequirements.security?.length || 0) > 0 ||
+          (formData.scopeOfWork.nonFunctionalRequirements.devops?.length || 0) > 0
+        )
+        return formData.scopeOfWork?.functionalRequirements && formData.scopeOfWork.functionalRequirements.length > 0 && 
+               formData.scopeOfWork?.activitiesInScope && formData.scopeOfWork.activitiesInScope.length > 0
+      case 5:
+        return formData.disciplines && formData.disciplines.length > 0 && 
+               formData.requirements && formData.requirements.length > 0
+      case 6:
+        return formData.budgetBreakdown?.totalBudget && 
+               formData.complianceTerms && formData.complianceTerms.length > 0
       default:
         return true
     }
   }
 
   const canProceedToGenerate = () => {
-    // More comprehensive validation for final generation
-    return formData.projectName && 
-           formData.industry && 
-           formData.projectType && 
-           formData.projectDescription && 
-           ((formData.disciplines?.length || 0) > 0 || (formData.requirements?.length || 0) > 0)
+    // Comprehensive validation for final generation
+    const hasBasicInfo = formData.projectName && 
+                        formData.industry && 
+                        formData.projectType && 
+                        formData.projectDescription
+    
+    const hasContactInfo = formData.contactInfo?.primaryContact &&
+                          formData.contactInfo?.email
+    
+    const hasTimeline = formData.rfpTimeline?.issueDate &&
+                       formData.rfpTimeline?.submissionDeadline
+    
+    const hasScopeOfWork = formData.scopeOfWork?.functionalRequirements && 
+                          formData.scopeOfWork.functionalRequirements.length > 0 &&
+                          formData.scopeOfWork?.activitiesInScope && 
+                          formData.scopeOfWork.activitiesInScope.length > 0
+    
+    const hasRequirements = formData.disciplines && formData.disciplines.length > 0 &&
+                           formData.requirements && formData.requirements.length > 0
+    
+    const hasBudgetCompliance = formData.budgetBreakdown?.totalBudget &&
+                               formData.complianceTerms && formData.complianceTerms.length > 0
+
+    return hasBasicInfo && hasContactInfo && hasTimeline && hasScopeOfWork && hasRequirements && hasBudgetCompliance
   }
 
   return (
@@ -317,78 +434,60 @@ export default function GeneratePage() {
                   <CardContent className="p-6">
                     <div className="relative">
                       {/* Steps Container */}
-                      <div className="flex items-start justify-between relative">
-                        {[1, 2, 3].map((step) => {
-                          const isCompleted = validateStep(step) && currentStep > step
-                          const isCurrent = currentStep === step
-                          const hasErrors = step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ||
-                                          step === 2 && (!formData.projectDescription || !formData.location) ||
-                                          step === 3 && !canProceedToGenerate()
+                      <div className="flex items-start justify-between relative overflow-x-auto">
+                        {[
+                          { num: 1, label: 'Project Basics' },
+                          { num: 2, label: 'Description & Terms' },
+                          { num: 3, label: 'Timeline & Contact' },
+                          { num: 4, label: 'Scope of Work' },
+                          { num: 5, label: 'Requirements' },
+                          { num: 6, label: 'Budget & Compliance' }
+                        ].map((step, index) => {
+                          const isCompleted = validateStep(step.num) && currentStep > step.num
+                          const isCurrent = currentStep === step.num
                           
                           return (
-                            <div key={step} className="flex flex-col items-center flex-1">
+                            <div key={step.num} className="flex flex-col items-center flex-1 min-w-0">
                               {/* Step Circle */}
                               <button
-                                onClick={() => setCurrentStep(step)}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors mb-3 relative z-10 border-4 border-white shadow-lg ${
+                                onClick={() => setCurrentStep(step.num)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors mb-2 relative z-10 border-2 border-white shadow-md ${
                                   isCurrent
                                     ? 'bg-blue-600 text-white' 
                                     : isCompleted
                                       ? 'bg-green-600 text-white' 
-                                      : hasErrors && step < currentStep
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                                 }`}
                               >
-                                {isCompleted ? <CheckCircle className="h-5 w-5" /> : step}
+                                {isCompleted ? <CheckCircle className="h-4 w-4" /> : step.num}
                               </button>
                               
                               {/* Step Label */}
                               <button
-                                onClick={() => setCurrentStep(step)}
-                                className={`text-sm text-center transition-colors px-2 ${
+                                onClick={() => setCurrentStep(step.num)}
+                                className={`text-xs text-center transition-colors px-1 ${
                                   isCurrent ? 'text-blue-600 font-semibold' : 
                                   isCompleted ? 'text-green-600 font-semibold' : 'text-gray-600 hover:text-gray-800'
                                 }`}
                               >
-                                {step === 1 && 'Project Basics'}
-                                {step === 2 && 'Details & Scope'}
-                                {step === 3 && 'Requirements'}
+                                {step.label}
                               </button>
-                              
-                              {/* Status Indicator */}
-                              <div className="mt-1 text-center">
-                                {step === 1 && (!formData.projectName || !formData.industry || !formData.projectType) ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : step === 2 && (!formData.projectDescription || !formData.location) ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : step === 3 && (formData.requirements?.length || 0) === 0 ? (
-                                  <span className="text-amber-500 text-xs font-medium">● Missing</span>
-                                ) : isCompleted || (isCurrent && validateStep(step)) ? (
-                                  <span className="text-green-500 text-xs font-medium">✓ Complete</span>
-                                ) : (
-                                  <span className="text-gray-400 text-xs">○ Pending</span>
-                                )}
-                              </div>
                             </div>
                           )
                         })}
                         
                         {/* Connecting Lines Behind Circles */}
-                        <div className="absolute top-5 left-0 right-0 flex items-center z-0">
-                          {/* Single continuous line from step 1 to step 3 */}
-                          <div className="flex items-center w-full px-5">
-                            {/* Line from step 1 to step 2 */}
-                            <div className="w-5" /> {/* Space for first circle */}
-                            <div className={`h-1 flex-1 transition-all duration-300 ${
-                              validateStep(1) && currentStep > 1 ? 'bg-green-600' : 'bg-gray-200'
-                            }`} />
-                            <div className="w-10" /> {/* Space for middle circle */}
-                            {/* Line from step 2 to step 3 */}
-                            <div className={`h-1 flex-1 transition-all duration-300 ${
-                              validateStep(2) && currentStep > 2 ? 'bg-green-600' : 'bg-gray-200'
-                            }`} />
-                            <div className="w-5" /> {/* Space for last circle */}
+                        <div className="absolute top-4 left-0 right-0 flex items-center z-0">
+                          <div className="flex items-center w-full px-4">
+                            {[1, 2, 3, 4, 5].map((stepNum) => (
+                              <div key={stepNum} className="flex items-center flex-1">
+                                <div className="w-4" /> {/* Space for circle */}
+                                <div className={`h-0.5 flex-1 transition-all duration-300 ${
+                                  validateStep(stepNum) && currentStep > stepNum ? 'bg-green-600' : 'bg-gray-200'
+                                }`} />
+                              </div>
+                            ))}
+                            <div className="w-4" /> {/* Space for last circle */}
                           </div>
                         </div>
                       </div>
@@ -501,7 +600,7 @@ export default function GeneratePage() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Project Description */}
+                {/* Step 2: Project Description & Terms */}
                 {currentStep === 2 && (
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -512,10 +611,10 @@ export default function GeneratePage() {
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
                           <BookOpen className="h-5 w-5 text-blue-600" />
-                          <span>Project Details & Scope</span>
+                          <span>Project Description & General Terms</span>
                         </CardTitle>
                         <CardDescription>
-                          Provide detailed description and scope of your project
+                          Provide detailed description, introduction, and general terms
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -524,20 +623,67 @@ export default function GeneratePage() {
                           <Textarea
                             id="projectDescription"
                             placeholder="Provide a comprehensive description of your project, including objectives, expected outcomes, and key deliverables..."
-                            rows={8}
+                            rows={6}
                             value={formData.projectDescription}
                             onChange={(e) => setFormData(prev => ({ ...prev, projectDescription: e.target.value }))}
+                            maxLength={500}
+                          />
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">
+                              Be specific about project goals and requirements.
+                            </span>
+                            <span className={formData.projectDescription.length > 450 ? 'text-orange-500' : 'text-gray-500'}>
+                              {formData.projectDescription.length}/500 characters
+                            </span>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="space-y-2">
+                          <Label htmlFor="introduction">RFP Introduction *</Label>
+                          <Textarea
+                            id="introduction"
+                            placeholder="Write a formal introduction for the RFP document, including background context and purpose..."
+                            rows={4}
+                            value={formData.introduction}
+                            onChange={(e) => setFormData(prev => ({ ...prev, introduction: e.target.value }))}
                           />
                           <p className="text-sm text-gray-500">
-                            Minimum 100 characters. Be specific about project goals and requirements.
+                            This will appear as the opening section of your RFP document.
                           </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="generalTermsConditions">General Terms & Conditions *</Label>
+                          <Textarea
+                            id="generalTermsConditions"
+                            placeholder="Specify general terms and conditions that apply to this RFP..."
+                            rows={4}
+                            value={formData.generalTermsConditions}
+                            onChange={(e) => setFormData(prev => ({ ...prev, generalTermsConditions: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            Include standard clauses, legal requirements, and general conditions.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="responseFormat">Response Format & Instructions</Label>
+                          <Textarea
+                            id="responseFormat"
+                            placeholder="Specify how respondents should format their proposals, required sections, file formats, etc..."
+                            rows={3}
+                            value={formData.responseFormat}
+                            onChange={(e) => setFormData(prev => ({ ...prev, responseFormat: e.target.value }))}
+                          />
                         </div>
                       </CardContent>
                     </Card>
                   </motion.div>
                 )}
 
-                {/* Step 3: Requirements & Specifications */}
+                {/* Step 3: Timeline & Contact Information */}
                 {currentStep === 3 && (
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -547,8 +693,431 @@ export default function GeneratePage() {
                     <Card className="shadow-lg border-0">
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
+                          <Clock className="h-5 w-5 text-blue-600" />
+                          <span>Timeline & Contact Information</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Set RFP timeline and provide contact details for inquiries
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Contact Information */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Contact Information *</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="primaryContact">Primary Contact *</Label>
+                              <Input
+                                id="primaryContact"
+                                placeholder="Name of the contact person"
+                                value={formData.contactInfo?.primaryContact || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  contactInfo: { ...prev.contactInfo!, primaryContact: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactEmail">Email *</Label>
+                              <Input
+                                id="contactEmail"
+                                type="email"
+                                placeholder="contact@organization.gov.in"
+                                value={formData.contactInfo?.email || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  contactInfo: { ...prev.contactInfo!, email: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactPhone">Phone Number</Label>
+                              <Input
+                                id="contactPhone"
+                                placeholder="+91-XXXXXXXXXX"
+                                value={formData.contactInfo?.phone || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  contactInfo: { ...prev.contactInfo!, phone: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contactAddress">Address</Label>
+                              <Input
+                                id="contactAddress"
+                                placeholder="Official address"
+                                value={formData.contactInfo?.address || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  contactInfo: { ...prev.contactInfo!, address: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* RFP Timeline */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">RFP Timeline *</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="issueDate">RFP Issue Date *</Label>
+                              <Input
+                                id="issueDate"
+                                type="date"
+                                value={formData.rfpTimeline?.issueDate || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  rfpTimeline: { ...prev.rfpTimeline!, issueDate: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="clarificationDeadline">Clarification Deadline</Label>
+                              <Input
+                                id="clarificationDeadline"
+                                type="date"
+                                value={formData.rfpTimeline?.clarificationDeadline || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  rfpTimeline: { ...prev.rfpTimeline!, clarificationDeadline: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="submissionDeadline">Final Submission Deadline *</Label>
+                              <Input
+                                id="submissionDeadline"
+                                type="date"
+                                value={formData.rfpTimeline?.submissionDeadline || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  rfpTimeline: { ...prev.rfpTimeline!, submissionDeadline: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="validityPeriod">RFP Validity Period</Label>
+                              <Input
+                                id="validityPeriod"
+                                placeholder="e.g., 90 days"
+                                value={formData.rfpTimeline?.validityPeriod || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  rfpTimeline: { ...prev.rfpTimeline!, validityPeriod: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 4: Scope of Work */}
+                {currentStep === 4 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
                           <Target className="h-5 w-5 text-blue-600" />
-                          <span>Requirements & Specifications</span>
+                          <span>Scope of Work</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Define functional requirements, non-functional requirements, and activities
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Functional Requirements */}
+                        <div className="space-y-3">
+                          <Label>Functional Requirements *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter a functional requirement..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('scopeOfWork.functionalRequirements', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('scopeOfWork.functionalRequirements', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(formData.scopeOfWork?.functionalRequirements || []).map((req, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{req}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('scopeOfWork.functionalRequirements', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Non-Functional Requirements */}
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-lg font-semibold">Non-Functional Requirements</Label>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Define quality attributes, performance standards, and operational requirements that specify how the system should behave.
+                            </p>
+                          </div>
+                          
+                          {/* User Experience */}
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">User Experience</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter user experience requirement (e.g., intuitive interface, accessibility compliance)..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.userExperience', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.userExperience', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.userExperience || []).map((req, index) => (
+                                <div key={index} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                                  <span className="text-sm">{req}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.userExperience', index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Performance */}
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">Performance Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter performance requirement (e.g., response time < 2 seconds, 99.9% uptime)..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.performance', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.performance', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.performance || []).map((req, index) => (
+                                <div key={index} className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                  <span className="text-sm">{req}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.performance', index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Security */}
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">Security Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter security requirement (e.g., SSL encryption, data backup, authentication)..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.security', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.security', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.security || []).map((req, index) => (
+                                <div key={index} className="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+                                  <span className="text-sm">{req}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.security', index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* DevOps */}
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium text-gray-700">Operational & Maintenance Requirements</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Enter operational requirement (e.g., 24/7 support, maintenance schedule, backup procedures)..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addToArray('scopeOfWork.nonFunctionalRequirements.devops', e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                  addToArray('scopeOfWork.nonFunctionalRequirements.devops', input.value)
+                                  input.value = ''
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.scopeOfWork?.nonFunctionalRequirements?.devops || []).map((req, index) => (
+                                <div key={index} className="flex items-center justify-between bg-purple-50 p-3 rounded-lg">
+                                  <span className="text-sm">{req}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFromArray('scopeOfWork.nonFunctionalRequirements.devops', index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Activities in Scope */}
+                        <div className="space-y-3">
+                          <Label>Activities in Scope *</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Enter activity to be performed..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  addToArray('scopeOfWork.activitiesInScope', e.currentTarget.value)
+                                  e.currentTarget.value = ''
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                addToArray('scopeOfWork.activitiesInScope', input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {(formData.scopeOfWork?.activitiesInScope || []).map((activity, index) => (
+                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm">{activity}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromArray('scopeOfWork.activitiesInScope', index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Step 5: Requirements & Specifications */}
+                {currentStep === 5 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Settings className="h-5 w-5 text-blue-600" />
+                          <span>Technical Requirements & Disciplines</span>
                         </CardTitle>
                         <CardDescription>
                           Define technical requirements, disciplines, and expected outcomes
@@ -558,21 +1127,6 @@ export default function GeneratePage() {
                         {/* Disciplines */}
                         <div className="space-y-3">
                           <Label>Disciplines/Expertise Required *</Label>
-                          {!formData.industry && (
-                            <Alert className="border-amber-200 bg-amber-50">
-                              <AlertTriangle className="h-4 w-4 text-amber-600" />
-                              <AlertDescription className="text-amber-800">
-                                <strong>Industry Required:</strong> Please go back to Step 1 and select an industry to view available disciplines.
-                                <Button
-                                  variant="link"
-                                  className="p-0 ml-2 h-auto text-amber-700 underline"
-                                  onClick={() => setCurrentStep(1)}
-                                >
-                                  Go to Step 1
-                                </Button>
-                              </AlertDescription>
-                            </Alert>
-                          )}
                           <Select
                             onValueChange={(value) => addToArray('disciplines', value)}
                             disabled={!availableDisciplines.length}
@@ -581,9 +1135,7 @@ export default function GeneratePage() {
                               <SelectValue placeholder={
                                 availableDisciplines.length 
                                   ? "Add discipline..." 
-                                  : formData.industry 
-                                    ? "No disciplines available for this industry"
-                                    : "Select industry first"
+                                  : "Select industry first"
                               } />
                             </SelectTrigger>
                             <SelectContent>
@@ -595,7 +1147,7 @@ export default function GeneratePage() {
                             </SelectContent>
                           </Select>
                           <div className="flex flex-wrap gap-2">
-                            {formData.disciplines?.map((discipline, index) => (
+                            {(formData.disciplines || []).map((discipline, index) => (
                               <Badge key={index} variant="secondary" className="px-3 py-1">
                                 {discipline}
                                 <Button
@@ -609,16 +1161,11 @@ export default function GeneratePage() {
                               </Badge>
                             ))}
                           </div>
-                          {formData.industry && availableDisciplines.length === 0 && (
-                            <p className="text-sm text-gray-500">
-                              No predefined disciplines available for {formData.industry}. You can add custom requirements below.
-                            </p>
-                          )}
                         </div>
 
                         <Separator />
 
-                        {/* Requirements */}
+                        {/* Key Requirements */}
                         <div className="space-y-3">
                           <Label>Key Requirements *</Label>
                           <div className="flex space-x-2">
@@ -645,7 +1192,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.requirements?.map((requirement, index) => (
+                            {(formData.requirements || []).map((requirement, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{requirement}</span>
                                 <Button
@@ -687,7 +1234,7 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.technicalSpecifications?.map((spec, index) => (
+                            {(formData.technicalSpecifications || []).map((spec, index) => (
                               <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                                 <span className="text-sm">{spec}</span>
                                 <Button
@@ -701,17 +1248,62 @@ export default function GeneratePage() {
                             ))}
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
 
-                        {/* Expected Outcomes */}
+                {/* Step 6: Budget & Compliance */}
+                {currentStep === 6 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <IndianRupee className="h-5 w-5 text-blue-600" />
+                          <span>Budget Breakdown & Compliance</span>
+                        </CardTitle>
+                        <CardDescription>
+                          Define budget structure, compliance terms, and final expectations
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Budget Breakdown */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Budget Breakdown</h3>
+                          <div className="space-y-2">
+                            <Label htmlFor="totalBudget">Total Budget *</Label>
+                            <div className="relative">
+                              <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="totalBudget"
+                                placeholder="e.g., ₹85 Crores"
+                                className="pl-10"
+                                value={formData.budgetBreakdown?.totalBudget || ''}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  budgetBreakdown: { ...prev.budgetBreakdown!, totalBudget: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Compliance Terms */}
                         <div className="space-y-3">
-                          <Label>Expected Outcomes (Optional)</Label>
+                          <Label>Compliance Terms & Rules *</Label>
                           <div className="flex space-x-2">
                             <Input
-                              placeholder="Enter expected outcome..."
+                              placeholder="Enter compliance requirement (e.g., GFR 2017 compliance, CVC guidelines, etc.)..."
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault()
-                                  addToArray('expectedOutcomes', e.currentTarget.value)
+                                  addToArray('complianceTerms', e.currentTarget.value)
                                   e.currentTarget.value = ''
                                 }
                               }}
@@ -721,7 +1313,7 @@ export default function GeneratePage() {
                               variant="outline"
                               onClick={(e) => {
                                 const input = e.currentTarget.previousElementSibling as HTMLInputElement
-                                addToArray('expectedOutcomes', input.value)
+                                addToArray('complianceTerms', input.value)
                                 input.value = ''
                               }}
                             >
@@ -729,13 +1321,13 @@ export default function GeneratePage() {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {formData.expectedOutcomes?.map((outcome, index) => (
-                              <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                                <span className="text-sm">{outcome}</span>
+                            {(formData.complianceTerms || []).map((term, index) => (
+                              <div key={index} className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                <span className="text-sm font-medium text-green-900">{term}</span>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => removeFromArray('expectedOutcomes', index)}
+                                  onClick={() => removeFromArray('complianceTerms', index)}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -743,10 +1335,27 @@ export default function GeneratePage() {
                             ))}
                           </div>
                         </div>
+
+                        {/* Expectations */}
+                        <div className="space-y-2">
+                          <Label htmlFor="expectations">Vendor Expectations & Evaluation Criteria</Label>
+                          <Textarea
+                            id="expectations"
+                            placeholder="Describe what you expect from vendors, evaluation criteria, selection process, etc..."
+                            rows={4}
+                            value={formData.expectations}
+                            onChange={(e) => setFormData(prev => ({ ...prev, expectations: e.target.value }))}
+                          />
+                          <p className="text-sm text-gray-500">
+                            This will help vendors understand how they will be evaluated and what is expected.
+                          </p>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
                 )}
+
+                
 
                 {/* Navigation */}
                 <div className="flex justify-between">
@@ -758,7 +1367,7 @@ export default function GeneratePage() {
                     Previous
                   </Button>
                   <div className="flex space-x-2">
-                    {currentStep < 3 ? (
+                    {currentStep < 6 ? (
                       <Button
                         onClick={() => setCurrentStep(currentStep + 1)}
                         disabled={!validateStep(currentStep)}
@@ -768,12 +1377,24 @@ export default function GeneratePage() {
                     ) : (
                       <div className="flex flex-col items-end space-y-2">
                         {!canProceedToGenerate() && (
-                          <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded border">
-                            {!formData.projectName && "• Project name required"}
-                            {!formData.industry && "• Industry selection required"}
-                            {!formData.projectType && "• Project type required"}
-                            {!formData.projectDescription && "• Project description required"}
-                            {(formData.disciplines?.length || 0) === 0 && (formData.requirements?.length || 0) === 0 && "• At least one discipline or requirement needed"}
+                          <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded border max-w-md">
+                            <div className="font-semibold mb-1">Missing Required Fields:</div>
+                            {!formData.projectName && <div>• Project name required</div>}
+                            {!formData.industry && <div>• Industry selection required</div>}
+                            {!formData.projectType && <div>• Project type required</div>}
+                            {!formData.projectDescription && <div>• Project description required</div>}
+                            {!formData.introduction && <div>• RFP introduction required</div>}
+                            {!formData.generalTermsConditions && <div>• General terms & conditions required</div>}
+                            {!formData.contactInfo?.primaryContact && <div>• Primary contact required</div>}
+                            {!formData.contactInfo?.email && <div>• Contact email required</div>}
+                            {!formData.rfpTimeline?.issueDate && <div>• Issue date required</div>}
+                            {!formData.rfpTimeline?.submissionDeadline && <div>• Submission deadline required</div>}
+                            {(!formData.scopeOfWork?.functionalRequirements || formData.scopeOfWork.functionalRequirements.length === 0) && <div>• Functional requirements required</div>}
+                            {(!formData.scopeOfWork?.activitiesInScope || formData.scopeOfWork.activitiesInScope.length === 0) && <div>• Activities in scope required</div>}
+                            {(!formData.disciplines || formData.disciplines.length === 0) && <div>• At least one discipline required</div>}
+                            {(!formData.requirements || formData.requirements.length === 0) && <div>• At least one key requirement needed</div>}
+                            {!formData.budgetBreakdown?.totalBudget && <div>• Total budget required</div>}
+                            {(!formData.complianceTerms || formData.complianceTerms.length === 0) && <div>• Compliance terms required</div>}
                           </div>
                         )}
                         <Button
