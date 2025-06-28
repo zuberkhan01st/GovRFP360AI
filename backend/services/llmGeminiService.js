@@ -75,7 +75,69 @@ PROJECT DETAILS:
 - Timeline: ${userInput.timeline}
 - Location: ${userInput.location}
 - Description: ${userInput.projectDescription || 'Comprehensive project implementation'}
-- Requirements: ${Array.isArray(userInput.requirements) ? userInput.requirements.join(', ') : 'As specified in project scope'}
+
+CONTACT INFORMATION:
+${userInput.contactInfo ? `
+- Primary Contact: ${userInput.contactInfo.primaryContact}
+- Email: ${userInput.contactInfo.email}
+- Phone: ${userInput.contactInfo.phone || 'As per government directory'}
+- Address: ${userInput.contactInfo.address || 'Government office address'}
+` : '- Contact details as per standard government protocols'}
+
+RFP TIMELINE:
+${userInput.rfpTimeline ? `
+- Issue Date: ${userInput.rfpTimeline.issueDate}
+- Clarification Deadline: ${userInput.rfpTimeline.clarificationDeadline || 'TBD'}
+- Submission Deadline: ${userInput.rfpTimeline.submissionDeadline}
+- Validity Period: ${userInput.rfpTimeline.validityPeriod || '90 days'}
+` : '- Timeline as per standard government procurement schedule'}
+
+COMPREHENSIVE SCOPE OF WORK:
+${userInput.scopeOfWork ? `
+Functional Requirements:
+${userInput.scopeOfWork.functionalRequirements ? userInput.scopeOfWork.functionalRequirements.map(req => `- ${req}`).join('\n') : '- As detailed in project specifications'}
+
+Non-Functional Requirements:
+${userInput.scopeOfWork.nonFunctionalRequirements ? `
+User Experience Requirements:
+${userInput.scopeOfWork.nonFunctionalRequirements.userExperience ? userInput.scopeOfWork.nonFunctionalRequirements.userExperience.map(req => `- ${req}`).join('\n') : '- Standard user experience compliance'}
+
+Performance Requirements:
+${userInput.scopeOfWork.nonFunctionalRequirements.performance ? userInput.scopeOfWork.nonFunctionalRequirements.performance.map(req => `- ${req}`).join('\n') : '- Standard performance benchmarks'}
+
+Security Requirements:
+${userInput.scopeOfWork.nonFunctionalRequirements.security ? userInput.scopeOfWork.nonFunctionalRequirements.security.map(req => `- ${req}`).join('\n') : '- Standard government security protocols'}
+
+Operational & Maintenance Requirements:
+${userInput.scopeOfWork.nonFunctionalRequirements.devops ? userInput.scopeOfWork.nonFunctionalRequirements.devops.map(req => `- ${req}`).join('\n') : '- Standard operational requirements'}
+
+Activities in Scope:
+${userInput.scopeOfWork.activitiesInScope ? userInput.scopeOfWork.activitiesInScope.map(activity => `- ${activity}`).join('\n') : '- As per project requirements'}
+` : ''}
+` : '- Scope as defined in project documentation'}
+
+TECHNICAL REQUIREMENTS:
+- Disciplines Required: ${Array.isArray(userInput.disciplines) ? userInput.disciplines.join(', ') : 'As specified in project scope'}
+- Key Requirements: ${Array.isArray(userInput.requirements) ? userInput.requirements.join(', ') : 'As specified in project scope'}
+- Technical Specifications: ${Array.isArray(userInput.technicalSpecifications) ? userInput.technicalSpecifications.join(', ') : 'As per industry standards'}
+
+BUDGET & COMPLIANCE:
+${userInput.budgetBreakdown ? `
+- Total Budget: ${userInput.budgetBreakdown.totalBudget}
+` : ''}
+- Compliance Terms: ${Array.isArray(userInput.complianceTerms) ? userInput.complianceTerms.join(', ') : 'GFR 2017, CVC Guidelines, Make in India'}
+
+VENDOR EXPECTATIONS:
+${userInput.expectations || 'High-quality delivery as per government standards with full compliance to all regulations and requirements.'}
+
+INTRODUCTION & TERMS:
+${userInput.introduction || 'Standard government RFP introduction'}
+
+General Terms & Conditions:
+${userInput.generalTermsConditions || 'As per standard government procurement terms'}
+
+Response Format:
+${userInput.responseFormat || 'Standard government proposal format'}
 
 MANDATORY REQUIREMENTS - GENERATE ALL SECTIONS COMPLETELY:
 1. Create a MINIMUM 4,000-6,000 word comprehensive Indian Government RFP
