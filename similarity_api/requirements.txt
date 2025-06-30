@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+python-multipart
+scikit-learn
+PyMuPDF
+numpy==1.23.5
