@@ -1,7 +1,3 @@
-
-
-https://github.com/user-attachments/assets/7171adb4-45aa-4686-a88a-6f3aece77c2c
-
 # 🏛️ GovRFP360AI
 
 GovRFP360AI is a Generative AI-powered web platform designed to help government agencies streamline their RFP (Request for Proposal) workflows. It automates the creation of compliant, standardized proposal documents, enables automated regulatory compliance checks, and offers advanced semantic search over document collections.
