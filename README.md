@@ -18,6 +18,10 @@ Automated RFP document creation using Gemini LLM with intelligent templates and 
 ### 🔍 Part 2: Compliance Verification System
 RAG-powered compliance checking with similarity search against government regulations and procurement standards.
 
+
+## Demonstration:
+
+### [🎥 Watch Demo Video](public/video_demo.mp4)
 ---
 
 ## 🔧 Key Features
