@@ -78,6 +78,9 @@ export default function HomePage() {
               <Link href="/templates" className="text-gray-700 hover:text-blue-600 transition-colors">
                 Templates
               </Link>
+              <Link href="/admin" className="text-gray-700 hover:text-blue-600 transition-colors font-semibold">
+                Admin
+              </Link>
             </nav>
           </div>
         </div>

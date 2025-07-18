@@ -88,7 +88,7 @@ export default function CompliancePage() {
         },
       ],
       summary:
-        "The tender submission shows strong technical and financial compliance but requires attention to regulatory documentation and quality standards. Recommend requesting additional documentation before final approval.",
+        "This proposal demonstrates strong performance in technical requirements, financial compliance, and experience & credentials. However, regulatory documentation and quality standards require further attention. It is recommended to request updated legal documents and a more detailed quality assurance plan before proceeding to final approval.",
     }
 
     setResult(mockResult)
